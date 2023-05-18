@@ -1,3 +1,5 @@
 # IAC23
 
 I <3 ASSEMBLY FR FR
+
+ENCODING!! windows1252
