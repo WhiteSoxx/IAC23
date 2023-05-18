@@ -1,0 +1,11 @@
+# Ignore all files
+*
+
+# Include .asm files
+!*.asm
+
+# Include readme file
+!README.md
+
+# Include .gitignore file
+!.gitignore
