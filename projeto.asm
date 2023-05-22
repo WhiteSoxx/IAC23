@@ -1,10 +1,12 @@
 ; ******************************************************************************
 ; * IST-UL
-; * Modulo:    teclado.asm
-; * Descrição: Exemplifica o acesso a um teclado.
-; *            Lê todas as linha do teclado, verificando se há alguma tecla
-; *            premida nessa linha.
+; * Modulo:    projeto.asm
+; * Descrição:
 ; *
+; * Grupo:     36
+; * Alunos:    106537 - Francisco Fernandes
+; *            106326 - Guilherme Filipe
+; *            106507 - Martim Afonso
 ; ******************************************************************************
 
 ; ******************************************************************************
@@ -33,7 +35,7 @@ inicio:
 ; corpo principal do programa
 ciclo:
     MOV  R1, 1         ; para guardar o valor da linha a ser testada
-    MOV  R6, 0         ; registo temporário da linha testada,
+    MOV  R6, 0         ; registo temporário da linha testada (linha anterior),
     MOVB [R4], R6      ; escreve linha e coluna a zero nos displays
 
 espera_tecla:          ; neste ciclo espera-se até uma tecla ser premida
