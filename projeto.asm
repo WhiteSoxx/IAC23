@@ -33,7 +33,9 @@ inicio:
     MOV  R7, LINHA_MAX ; "teto" para linha maxima a testar (4ª linha, 1000b) 
 
 ; corpo principal do programa
-ciclo:
+
+; ciclo de detecção de teclas
+tec_ciclo:
     MOV  R1, 1         ; para guardar o valor da linha a ser testada
     MOV  R6, 0         ; registo temporário da linha testada (linha anterior),
     MOVB [R4], R6      ; escreve linha e coluna a zero nos displays
@@ -63,7 +65,21 @@ ha_tecla:              ; neste ciclo espera-se até NENHUMA tecla estar premida
     JNZ  ha_tecla      ; se ainda houver uma tecla premida, espera até não haver
     JMP  ciclo         ; repete ciclo
 
+testa_tecla:
+    MOVB [R4], R6      ; escreve linha e coluna a zero nos displays
+    JMP  tec_ciclo     ; volta a testar teclas
 
 
 
+; ações do teclado
 
+move_asteroide:         ; TEMP!
+
+sobe_sonda:             ; TEMP!
+
+inc_display:            ; TEMP!
+
+dec_display:            ; TEMP!
+; ******************************************************************************
+; * Interrupções
+; ******************************************************************************
