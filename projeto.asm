@@ -20,6 +20,20 @@ TEC_COL    EQU 0E000H  ; endereço das colunas do teclado (periférico PIN)
 LINHA_MAX  EQU 00010H  ; "teto" para a linha maxima a testar (4ª linha, 1000b)
 MASCARA    EQU 0FH     ; para isolar os 4 bits de menor peso, ao ler as colunas do teclado
 
+; *********************************************************************************
+; * Dados 
+; *********************************************************************************
+	PLACE       1000H
+pilha:
+	STACK 100H			; espaçco reservado para a pilha 
+						; (200H bytes, pois são 100H words)
+SP_inicial:				; este é o endereÿo (1200H) com que o SP deve ser 
+						; inicializado. O 1.ÿ end. de retorno será
+						; armazenado em 11FEH (1200H-2)
+imagem_hexa:
+	BYTE	00H			; imagem em memória dos displays hexadecimais 
+						; (inicializada a zero, mas podia ser outro valor qualquer).
+
 ; ******************************************************************************
 ; * Código
 ; ******************************************************************************
