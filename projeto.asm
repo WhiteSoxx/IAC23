@@ -51,12 +51,11 @@ inicio:
     MOV  R4, DISPLAYS  ; endereço do periférico dos displays
     MOV  R5, MASCARA   ; para isolar os 4 bits de menor peso, ao ler as colunas do teclado
     MOV  R7, LINHA_MAX ; "teto" para linha maxima a testar (4ª linha, 1000b) 
-    
-    MOV  [VAR_ENERGIA], ENERGIA_BASE ; inicializa a energia
-    MOV  [R4], VAR_ENERGIA ; inicializa o valor do display da energia
+    MOV  R1, ENERGIA_BASE  ; inicializa a energia
+    MOV  [VAR_ENERGIA], R1 ; inicializa a energia
+    MOV  R1, VAR_ENERGIA   ; inicializa o contador
+    MOV  [R4], R1      ; inicializa o valor do display da energia
 
-fim :                  ; fim do programa (ciclo infinito)
-    JMP   fim
 ; corpo principal do programa
 
 ; ciclo de detecção de teclas
@@ -130,6 +129,9 @@ dec_display:            ; TEMP!
     SUB R1, 1           ; decrementa o valor do display
     MOV [R4], R1        ; atualiza o valor do display
     JMP tec_ciclo       ; ação efetuada, testar teclado novamente
+
+fim :                  ; fim do programa (ciclo infinito)
+    JMP   fim
 
 ; ******************************************************************************
 ; * Interrupções
