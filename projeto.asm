@@ -19,12 +19,30 @@ TEC_LIN    EQU 0C000H  ; endereço das linhas do teclado (periférico POUT-2)
 TEC_COL    EQU 0E000H  ; endereço das colunas do teclado (periférico PIN)
 LINHA_MAX  EQU 00010H  ; "teto" para a linha maxima a testar (4ª linha, 1000b)
 MASCARA    EQU 0FH     ; para isolar os 4 bits de menor peso, ao ler as colunas do teclado
-ENERGIA_BASE EQU 000FFEH   ; energia inicial
+ENERGIA_BASE EQU 00064H   ; energia inicial
 
 TEC_0      EQU 00011H  ; tecla 0
 TEC_1      EQU 00012H  ; tecla 1
 TEC_C      EQU 00081H  ; tecla C
 TEC_F      EQU 00088H  ; tecla F
+
+; ******************************************************************************
+; * Media Center
+; ******************************************************************************
+COMANDOS			EQU	6000H			; endereço de base dos comandos do MediaCenter
+
+DEFINE_LINHA   		EQU COMANDOS + 0AH	; endereço do comando para definir a linha
+DEFINE_COLUNA  		EQU COMANDOS + 0CH	; endereço do comando para definir a coluna
+DEFINE_PIXEL   		EQU COMANDOS + 12H	; endereço do comando para escrever um pixel
+APAGA_AVISO     	EQU COMANDOS + 40H  ; endereço do comando para apagar o aviso de nenhum cenário selecionado
+APAGA_ECRÃ	 		EQU COMANDOS + 02H	; endereço do comando para apagar todos os pixels já desenhados
+SELECIONA_CENARIO   EQU COMANDOS + 42H  ; endereço do comando para selecionar uma imagem de fundo
+
+N_LINHAS        EQU  32        ; número de linhas do ecrã (altura)
+N_COLUNAS       EQU  64        ; número de colunas do ecrã (largura)
+
+COR_PIXEL       EQU 0FF00H     ; cor do pixel: vermelho em ARGB (opaco e vermelho no máximo, verde e azul a 0)
+
 ; *********************************************************************************
 ; * Dados 
 ; *********************************************************************************
@@ -50,15 +68,22 @@ VAR_ENERGIA: WORD 000FFEH   ; variável para guardar a energia (ver constante EN
     PLACE       0
 inicio:		
 ; inicializações
-    MOV  SP, SP_inicial ; inicializa SP
+    MOV  SP, SP_inicial; inicializa Stack Pointer
+
     MOV  R2, TEC_LIN   ; endereço do periférico das linhas
     MOV  R3, TEC_COL   ; endereço do periférico das colunas
     MOV  R4, DISPLAYS  ; endereço do periférico dos displays
     MOV  R5, MASCARA   ; para isolar os 4 bits de menor peso, ao ler as colunas do teclado
+
     MOV  R7, LINHA_MAX ; "teto" para linha maxima a testar (4ª linha, 1000b) 
+
     MOV  R1, ENERGIA_BASE  ; inicializa a energia
     MOV  [VAR_ENERGIA], R1 ; inicializa a energia
-    MOV  [R4], R1      ; inicializa o valor do display da energia
+    MOV  [R4], R1          ; inicializa o valor do display da energia
+    MOV R1, 0              ; inicializa a linha atual
+    MOV [SELECIONA_CENARIO], R1 ; seleciona o cenário 1
+
+
 
 ; corpo principal do programa
 
@@ -81,7 +106,7 @@ espera_tecla:          ; neste ciclo espera-se até uma tecla ser premida
     PUSH R1            ; guarda a linha atual na pilha
     SHL  R1, 4         ; coloca linha no nibble high
     OR   R1, R0        ; junta coluna (nibble low)
-    MOV [R4], R1       ; escreve linha e coluna nos displays
+    ;MOV [R4], R1       ; escreve linha e coluna nos displays
     PUSH R1            ; guarda a linha e coluna na pilha
 
 testa_tecla:
