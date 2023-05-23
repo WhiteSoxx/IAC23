@@ -2,4 +2,4 @@
 
 I <3 ASSEMBLY FR FR
 
-ENCODING!! windows1252
+GRUPO 36
