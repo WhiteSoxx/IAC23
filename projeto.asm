@@ -37,6 +37,8 @@ DEFINE_PIXEL   		EQU COMANDOS + 12H	; endereço do comando para escrever um pixe
 APAGA_AVISO     	EQU COMANDOS + 40H  ; endereço do comando para apagar o aviso de nenhum cenário selecionado
 APAGA_ECRÃ	 		EQU COMANDOS + 02H	; endereço do comando para apagar todos os pixels já desenhados
 SELECIONA_CENARIO   EQU COMANDOS + 42H  ; endereço do comando para selecionar uma imagem de fundo
+SELECIONA_VID       EQU COMANDOS + 48H  ; endereço do comando para selecionar um vídeo/som
+PLAY_VID            EQU COMANDOS + 5AH  ; endereço do comando para começar a reproduzir o vídeo/som selecionado
 
 N_LINHAS        EQU  32        ; número de linhas do ecrã (altura)
 N_COLUNAS       EQU  64        ; número de colunas do ecrã (largura)
@@ -86,6 +88,7 @@ inicio:
 
 
 ; corpo principal do programa
+
 
 ; ciclo de detecção de teclas
 tec_ciclo:
@@ -150,6 +153,9 @@ move_asteroide:         ; TEMP!
     JMP ha_tecla        ; ação efetuada, testar teclado novamente
 
 sobe_sonda:             ; TEMP!
+    MOV R10, O          ; coloca o numero do som (0)
+    MOV [SELECIONA_SOM], R10; seleciona o som
+    MOV [SELECIONA_SOM], R10; toca o som
     JMP ha_tecla        ; ação efetuada, testar teclado novamente
 
 inc_display:            ; TEMP!
