@@ -12,3 +12,7 @@
 
 # Include .gitignore file
 !.gitignore
+
+!/assets/
+!/assets/*
+```
