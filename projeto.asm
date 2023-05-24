@@ -40,6 +40,12 @@ SELECIONA_CENARIO   EQU COMANDOS + 42H  ; endereço do comando para selecionar u
 SELECIONA_VID       EQU COMANDOS + 48H  ; endereço do comando para selecionar um vídeo/som
 PLAY_VID            EQU COMANDOS + 5AH  ; endereço do comando para começar a reproduzir o vídeo/som selecionado
 
+; ******************************************************************************
+; * Gráficos
+; ******************************************************************************
+
+MEMORIA_ECRA	EQU	8000H		; endereço de base da memória do ecrã
+
 N_LINHAS        EQU  32        ; número de linhas do ecrã (altura)
 N_COLUNAS       EQU  64        ; número de colunas do ecrã (largura)
 
@@ -63,6 +69,11 @@ VAR_LINHA:  WORD 0      ; variável para guardar a linha atual
 VAR_COLUNA: WORD 0      ; variável para guardar a coluna atual
 VAR_TECCOUNT: WORD -1   ; variável para guardar o contador para conversão de teclas
 VAR_ENERGIA: WORD 000FFEH   ; variável para guardar a energia (ver constante ENERGIA_BASE)
+
+VAR_COR_PIXEL: WORD COR_PIXEL ; variável para guardar a cor do pixel, default é vermelho
+
+VAR_COR_SONDA: WORD 0FFC0H    ; variável para guardar a cor da sonda, default é amarelo
+VAR_MSONDA_POS: WORD 25 ; variável para guardar a posição da sonda do meio (default é 25+1 (artefacto de desenha_sonda))
 
 ; ******************************************************************************
 ; * Código
@@ -117,19 +128,19 @@ testa_tecla:
     POP R1             ; retira da pilha a linha e coluna da tecla premida
 
     MOV R8, TEC_0      ; coloca o ID da tecla 0 em R8
-    CMP R1, R8         ; se R1=4, tecla 1 premida
+    CMP R1, R8         
     JZ  dec_display
 
     MOV R8, TEC_1      ; coloca o ID da tecla 1 em R8
-    CMP R1, R8         ; se R1=5, tecla 2 premida
+    CMP R1, R8         
     JZ  inc_display 
 
     MOV R8, TEC_C      ; coloca o ID da tecla C em R8
-    CMP R1, R8         ; se R1=6, tecla 3 premida
+    CMP R1, R8         
     JZ  sobe_sonda
 
     MOV R8, TEC_F      ; coloca o ID da tecla F em R8
-    CMP R1, R8         ; se R1=7, tecla 4 premida
+    CMP R1, R8         
     JZ  move_asteroide 
 
     JMP ha_tecla       ; testa se a tecla permanece premida
@@ -152,25 +163,74 @@ ha_tecla:              ; neste ciclo espera-se até NENHUMA tecla estar premida
 move_asteroide:         ; TEMP!
     JMP ha_tecla        ; ação efetuada, testar teclado novamente
 
-sobe_sonda:             ; TEMP!
-    MOV R10, O          ; coloca o numero do som (0)
-    MOV [SELECIONA_SOM], R10; seleciona o som
-    MOV [SELECIONA_SOM], R10; toca o som
-    JMP ha_tecla        ; ação efetuada, testar teclado novamente
+sobe_sonda:                 ; TEMP!
+    MOV R10, 0              ; coloca o numero do som (0)
+    MOV [SELECIONA_VID], R10; seleciona o som
+    MOV [SELECIONA_VID], R10; toca o som
+    MOV R10, [VAR_MSONDA_POS]  ; coloca a posição da sonda do meio em R10 
+    SUB R10, 2                ; decrementa a posição vertical da sonda do meio (sobe)
+    MOV [VAR_MSONDA_POS], R10 ; atualiza a posição da sonda do meio
+    CALL desenha_sonda        ; desenha a sonda do meio na posição atual
+    JMP ha_tecla            ; ação efetuada, não testar teclado novamente
 
-inc_display:            ; TEMP!
-    MOV R10, [VAR_ENERGIA] ; coloca o valor do display em R1
-    ADD R10, 0001b           ; incrementa o valor do display
-    MOV [R4], R10        ; atualiza o valor do display
-    MOV [VAR_ENERGIA], R10 ; atualiza o valor da energia
-    JMP ha_tecla        ; ação efetuada, testar teclado novamente
+inc_display:                ; TEMP!
+    MOV R10, [VAR_ENERGIA]  ; coloca o valor do display em R1
+    ADD R10, 0001b          ; incrementa o valor do display
+    MOV [R4], R10           ; atualiza o valor do display
+    MOV [VAR_ENERGIA], R10  ; atualiza o valor da energia
+    JMP ha_tecla            ; ação efetuada, não testar teclado novamente
+  
+dec_display:                ; TEMP!
+    MOV R10, [VAR_ENERGIA]  ; coloca o valor do display em R1
+    SUB R10, 0001b          ; decrementa o valor do display
+    MOV [R4], R10           ; atualiza o valor do display
+    MOV [VAR_ENERGIA], R10  ; atualiza o valor da energia
+    JMP ha_tecla            ; ação efetuada, não testar teclado novamente
 
-dec_display:            ; TEMP!
-    MOV R10, [VAR_ENERGIA] ; coloca o valor do display em R1
-    SUB R10, 0001b           ; decrementa o valor do display
-    MOV [R4], R10        ; atualiza o valor do display
-    MOV [VAR_ENERGIA], R10 ; atualiza o valor da energia
-    JMP ha_tecla        ; ação efetuada, testar teclado novamente
+; graficos
+
+desenha_sonda: 
+    PUSH R0                 ; guarda o valor de R0
+    PUSH R1                 ; guarda o valor de R1
+    PUSH R2                 ; guarda o valor de R2
+    PUSH R3
+
+    MOV R1, [VAR_MSONDA_POS]; coloca a posição vertical da sonda do meio em R1
+    MOV R2, 32              ; coloca a posição horizontal da sonda do meio em R2 (constante 32)
+    MOV R3, [VAR_COR_SONDA]   ; coloca a cor da sonda do meio em R3
+
+    CALL escreve_pixel      ; escreve o pixel na posição da sonda do meio
+;    ADD R1, 1               ; decrementa a posição a desenhar (cauda da sonda)
+;    CALL escreve_pixel      ; escreve o pixel na posição da sonda do meio
+;    SUB R1, 1               ; decrementa a posição a desenhar (cauda da sonda)
+;    CALL escreve_pixel      ; escreve o pixel na posição da sonda do meio
+    ADD R1, 2               ; coloca em R2 a posição da sonda a apagar 
+    MOV R3, 00000H          ; coloca em R3 a cor transparente
+    CALL escreve_pixel      ; apaga o pixel na posição anterior da sonda do meio
+    POP R3
+    POP R2
+    POP R1                  ; recupera o valor de R1
+    POP R0                  ; recupera o valor de R0
+    RET
+
+escreve_pixel:              ; ROTINA ASSUME REGISTOS LIMPOS, NUNCA CHAMAR DE FORMA AUTONOMA
+    MOV R0, MEMORIA_ECRA
+    PUSH R1                 ; guarda o valor de R1
+    PUSH R2                 ; guarda o valor de R2
+    PUSH R3                 ; guarda o valor de R3
+    ; É assumido presente em R1 a linha e em R2 a coluna, em R3 a cor
+	SHL	R1, 6			    ; linha * 64
+    ADD  R1, R2			    ; linha * 64 + coluna
+    SHL  R1, 1		     	; * 2, para ter o endereço da palavra
+	ADD	R0, R1		    	; MEMORIA_ECRA + 2 * (linha * 64 + coluna)
+	MOV	[R0], R3		   	; escreve cor no pixel
+    
+    POP R3
+    POP R2
+    POP R1                  
+    RET
+
+
 
 fim :                  ; fim do programa (ciclo infinito)
     JMP   fim
