@@ -55,6 +55,13 @@ LARGURA_AST		EQU	5			; largura do asteroide
 COR_PIXEL1		EQU	0F442H		; cor do pixel: contorno do asteroide em ARGB 
 COR_PIXEL2		EQU	0F985H		; cor do pixel: preenchimento do asteroide em ARGB
 
+NAVE_X     EQU  25
+NAVE_Y     EQU  27
+LARGURA_NAVE EQU 15
+ALTURA_NAVE EQU 4
+
+RED        EQU 0FFC0H
+
 ; *********************************************************************************
 ; * Dados 
 ; *********************************************************************************
@@ -112,7 +119,13 @@ DEF_CLEAR_AST:				; tabela que define o asteroide (cor, largura, pixels)
     WORD		0, 0, 0, 0, 0		;
     WORD		0, 0, 0, 0, 0		;
 
-DEF_NAVE:
+DEF_NAVE: WORD LARGURA_NAVE
+          WORD ALTURA_NAVE
+          WORD 0, 0 ,RED,RED,RED,RED,RED,RED,RED,RED,RED,RED,RED,   0 , 0          
+          WORD 0,  RED,RED,RED,RED,RED,RED,RED,RED,RED,RED,RED,RED,RED, 0           
+          WORD RED,RED,RED,RED,RED,RED,RED,RED,RED,RED,RED,RED,RED,RED,RED          
+          WORD RED,RED,RED,RED,RED,RED,RED,RED,RED,RED,RED,RED,RED,RED,RED          
+        
 
 ; ******************************************************************************
 ; * Código
@@ -138,8 +151,11 @@ inicio:
     MOV  [APAGA_ECRÃ], R1	; apaga todos os pixels já desenhados (o valor de R1 não é relevante)
     MOV [SELECIONA_CENARIO], R1 ; seleciona o cenário 1
 
+    CALL desenha_nave
+    JMP tec_ciclo     ; ciclo de detecção de teclas
 
 ; corpo principal do programa
+
 
 
 ; ciclo de detecção de teclas
@@ -276,6 +292,19 @@ dec_display:                ; TEMP!
 
 ; graficos
 
+desenha_nave:
+    PUSH R0
+    PUSH R1
+    PUSH R4
+    MOV R0, NAVE_Y
+    MOV R1, NAVE_X ; BUG, EXCEPTION N0 10H, R1 tem q ser igual a zero em draw sprite??
+    MOV R4, DEF_NAVE
+    CALL desenha_sprite
+    POP R4
+    POP R1
+    POP R0
+    RET
+
 desenha_sonda: 
     PUSH R0                 ; guarda o valor de R0
     PUSH R1                 ; guarda o valor de R1
@@ -342,8 +371,9 @@ desenha_linha:             ; desenha uma linha arbitrária
    
     PUSH R0                 ; guarda o valor de R0
     PUSH R1
-    MOV R1, 10
-    MUL R0, R1              ; multiplica a linha atual por 10
+    MOV R1, 2
+    MUL R0, R5             ; multiplica a linha atual por 2*col
+    MUL R0, R1
     POP R1
 
     ADD R4, R1             ;
