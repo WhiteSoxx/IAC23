@@ -3,21 +3,21 @@
   "savedWithSimulatorVersion" : "2.2.1",
   "savedWithSimulatorBuildOn" : "2023-05-16  at  14:54:44",
   "editorLocked" : true,
-  "startAutomatically" : true,
-  "showConnectionColors" : false,
+  "startAutomatically" : false,
+  "showConnectionColors" : true,
   "zoomScale" : 90,
   "gridVisible" : true,
   "primary screen width" : 1920,
   "primary screen height" : 1080,
   "window" : {
-    "X absolute" : -8,
-    "Y absolute" : -8,
-    "X relative" : -8,
-    "Y relative" : -8,
-    "width" : 1936,
-    "height" : 1066,
+    "X absolute" : 0,
+    "Y absolute" : 47,
+    "X relative" : 0,
+    "Y relative" : 47,
+    "width" : 1920,
+    "height" : 1100,
     "leftRightDividerLocation" : 296,
-    "topBottomDividerLocation" : 882
+    "topBottomDividerLocation" : 1027
   },
   "connections" : [ {
     "className" : "Connection",
@@ -181,10 +181,10 @@
         "Y" : 456
       }, {
         "X" : 776,
-        "Y" : 539
+        "Y" : 538
       }, {
         "X" : 805,
-        "Y" : 539
+        "Y" : 538
       } ]
     } ]
   }, {
@@ -207,10 +207,10 @@
       "targetPinID" : 12,
       "points" : [ {
         "X" : 805,
-        "Y" : 559
+        "Y" : 558
       }, {
         "X" : 752,
-        "Y" : 559
+        "Y" : 558
       }, {
         "X" : 752,
         "Y" : 247
@@ -267,10 +267,10 @@
         "Y" : 439
       }, {
         "X" : 248,
-        "Y" : 360
+        "Y" : 361
       }, {
         "X" : 488,
-        "Y" : 360
+        "Y" : 361
       }, {
         "X" : 488,
         "Y" : 127
@@ -289,10 +289,10 @@
         "Y" : 459
       }, {
         "X" : 248,
-        "Y" : 360
+        "Y" : 361
       }, {
         "X" : 488,
-        "Y" : 360
+        "Y" : 361
       }, {
         "X" : 488,
         "Y" : 127
@@ -311,10 +311,10 @@
         "Y" : 479
       }, {
         "X" : 248,
-        "Y" : 360
+        "Y" : 361
       }, {
         "X" : 488,
-        "Y" : 360
+        "Y" : 361
       }, {
         "X" : 488,
         "Y" : 127
@@ -349,10 +349,10 @@
         "Y" : 311
       }, {
         "X" : 648,
-        "Y" : 280
+        "Y" : 281
       }, {
         "X" : 488,
-        "Y" : 280
+        "Y" : 281
       }, {
         "X" : 488,
         "Y" : 127
@@ -365,16 +365,16 @@
       "targetPinID" : 9,
       "points" : [ {
         "X" : 805,
-        "Y" : 479
+        "Y" : 478
       }, {
         "X" : 648,
-        "Y" : 479
+        "Y" : 478
       }, {
         "X" : 648,
-        "Y" : 280
+        "Y" : 281
       }, {
         "X" : 488,
-        "Y" : 280
+        "Y" : 281
       }, {
         "X" : 488,
         "Y" : 127
@@ -393,10 +393,10 @@
       "targetPinID" : 74,
       "points" : [ {
         "X" : 949,
-        "Y" : 479
+        "Y" : 478
       }, {
         "X" : 1021,
-        "Y" : 479
+        "Y" : 478
       } ]
     } ]
   }, {
@@ -447,10 +447,10 @@
       "targetPinID" : 34,
       "points" : [ {
         "X" : 805,
-        "Y" : 499
+        "Y" : 498
       }, {
         "X" : 664,
-        "Y" : 499
+        "Y" : 498
       }, {
         "X" : 664,
         "Y" : 539
@@ -515,14 +515,14 @@
         "X" : 922,
         "Y" : 167
       }, {
-        "X" : 948,
+        "X" : 949,
         "Y" : 167
       }, {
-        "X" : 948,
-        "Y" : 96
+        "X" : 949,
+        "Y" : 97
       }, {
         "X" : 696,
-        "Y" : 96
+        "Y" : 97
       }, {
         "X" : 696,
         "Y" : 167
@@ -572,14 +572,14 @@
         "X" : 922,
         "Y" : 311
       }, {
-        "X" : 948,
+        "X" : 949,
         "Y" : 311
       }, {
-        "X" : 948,
-        "Y" : 96
+        "X" : 949,
+        "Y" : 97
       }, {
         "X" : 696,
-        "Y" : 96
+        "Y" : 97
       }, {
         "X" : 696,
         "Y" : 167
@@ -592,10 +592,10 @@
       "targetPinID" : 8,
       "points" : [ {
         "X" : 805,
-        "Y" : 519
+        "Y" : 518
       }, {
         "X" : 696,
-        "Y" : 519
+        "Y" : 518
       }, {
         "X" : 696,
         "Y" : 167
@@ -720,10 +720,10 @@
         "X" : 127,
         "Y" : 311
       }, {
-        "X" : 224,
+        "X" : 223,
         "Y" : 311
       }, {
-        "X" : 224,
+        "X" : 223,
         "Y" : 227
       }, {
         "X" : 253,
@@ -1218,7 +1218,7 @@
     "numberOfBits" : 16,
     "moduleDelay" : 5,
     "positionX" : 810,
-    "positionY" : 464,
+    "positionY" : 463,
     "nOutputPinsArray" : [ {
       "className" : "TristateOutPin",
       "elementID" : 50,
@@ -1449,11 +1449,7 @@
     "moduleDelay" : 5,
     "positionX" : 978,
     "positionY" : 608,
-    "simGuiVisibleInSimulation" : true,
-    "simGuiXRelative" : 1425,
-    "simGuiYRelative" : 522,
-    "simGuiWidth" : 166,
-    "simGuiHeight" : 187,
+    "simGuiVisibleInSimulation" : false,
     "columns" : 4,
     "key numbers radix" : "Hexadecimal",
     "key color" : "Default",
@@ -1491,12 +1487,8 @@
     "numberOfBits" : 12,
     "moduleDelay" : 5,
     "positionX" : 1026,
-    "positionY" : 464,
-    "simGuiVisibleInSimulation" : true,
-    "simGuiXRelative" : 1169,
-    "simGuiYRelative" : 521,
-    "simGuiWidth" : 265,
-    "simGuiHeight" : 212,
+    "positionY" : 463,
+    "simGuiVisibleInSimulation" : false,
     "nHexaDigits" : 3,
     "onColor" : "Red",
     "zColor" : "Black_White",
@@ -1525,8 +1517,21 @@
     "lineAddressNBits" : 5,
     "windowScreenWidthPixels" : 1024,
     "windowScreenHeightixels" : 512,
-    "defaultPenColor" : 65280,
-    "image paths" : [ "bgidea2.png", "bgidea1.png" ],
+    "defaultPenColor" : 65315,
+    "image paths" : [ "assets/bgidea1.png", "assets/bgidea2.png" ],
+    "sounds/videos settings" : [ {
+      "filePathName" : "assets/probe.wav",
+      "relative sound volume" : 1.0,
+      "relative start time" : 0.0,
+      "relative stop time" : 1.0,
+      "playAsClip" : true
+    }, {
+      "filePathName" : "assets/disparo.wav",
+      "relative sound volume" : 1.0,
+      "relative start time" : 0.0,
+      "relative stop time" : 1.0,
+      "playAsClip" : true
+    } ],
     "addressable data" : {
       "className" : "ModuleExtensionMemoryMediaCenter",
       "elementID" : 83,
