@@ -30,9 +30,13 @@ COR_PIXEL2			EQU	0F985H		; cor do pixel: preenchimento do asteroide em ARGB
 ; #######################################################################
 	PLACE		0100H				
 
-DEF_ASTEROIDE:					; tabela que define o asteroide (cor, largura, pixels)
+DEF_ASTEROIDE1:					; tabela que define o asteroide (cor, largura, pixels)
 	WORD		LARGURA
 	WORD		COR_PIXEL1, COR_PIXEL2, COR_PIXEL2, COR_PIXEL2, COR_PIXEL1		;
+	
+DEF_ASTEROIDE2:					; tabela que define o asteroide (cor, largura, pixels)
+	WORD		LARGURA
+	WORD		0, COR_PIXEL1, COR_PIXEL1, COR_PIXEL1, 0		;
      
 
 ; *********************************************************************************
@@ -51,15 +55,17 @@ definicoes_asteroide:
      MOV  R3, ALTURA		; altura do asteroide
 
 desenha_linha_asteroide:       		; desenha o asteroide a partir da tabela
-     MOV	R5, DEF_ASTEROIDE	; endereço da tabela que define o asteroide
+     MOV	R5, DEF_ASTEROIDE1	; endereço da tabela que define o asteroide
      MOV	R6, [R5]	; obtém a largura do asteroide
      ADD	R5, 2		; endereço da cor do 1º pixel (2 porque a largura é uma word)
 	
 desenha_linha:       		; desenha os pixels do asteroide a partir da tabela
-     MOV  R4, [R5]		; obtém a cor do próximo pixel do asteroide
      MOV  [DEFINE_LINHA], R1	; seleciona a linha
      MOV  [DEFINE_COLUNA], R2	; seleciona a coluna
+     CMP  R1, 0			; verifica se é a primeira linha
+     JZ  desenha_linha_alt 	; continua até percorrer toda a largura do asteroide
      MOV  [DEFINE_PIXEL], R4	; altera a cor do pixel na linha e coluna selecionadas
+     MOV  R4, [R5]		; obtém a cor do próximo pixel do asteroide
      ADD  R5, 2			; endereço da cor do próximo pixel (2 porque cada cor de pixel é uma word)
      ADD  R2, 1         	; próxima coluna
      SUB  R6, 1			; menos uma coluna para tratar
@@ -67,7 +73,23 @@ desenha_linha:       		; desenha os pixels do asteroide a partir da tabela
      ADD  R1, 1			; incrementa uma linha
      SUB  R2, 5			; reseta a coluna do asteroide
      SUB  R3, 1			; menos uma linha para tratar
+     CMP  R3, 1			; verifica se é a última linha
      JNZ  desenha_linha_asteroide ; continua até percorrer a altura do asteroide
 
+desenha_linha_alt:
+     MOV  R5, DEF_ASTEROIDE2	; endereço da tabela que define o asteroide
+     ADD  R5, 2		        ; endereço da cor do 1º pixel (2 porque a largura é uma word)
+     MOV  [DEFINE_PIXEL], R4	; altera a cor do pixel na linha e coluna selecionadas
+     MOV  R4, [R5]		; obtém a cor do próximo pixel do asteroide
+     ADD  R5, 2			; endereço da cor do próximo pixel (2 porque cada cor de pixel é uma word)
+     ADD  R2, 1         	; próxima coluna
+     SUB  R6, 1			; menos uma coluna para tratar
+     JNZ  desenha_linha_alt 	; continua até percorrer toda a largura do asteroide
+     ADD  R1, 1			; incrementa uma linha
+     SUB  R2, 5			; reseta a coluna do asteroide
+     SUB  R3, 1			; menos uma linha para tratar
+     CMP  R3, 1			; verifica se é a última linha
+     JNZ  desenha_linha_asteroide ; continua até percorrer a altura do asteroide
+     
 fim:
      JMP  fim                 ; termina programa 
