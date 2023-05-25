@@ -83,6 +83,7 @@ VAR_AST_POS_4: WORD 3   ; variável para guardar a posição do asteroide 4
 
 VAR_POS_H_ALVO: WORD 0    ; variável para guardar a posição horizontal do objeto a desenhar
 VAR_POS_V_ALVO: WORD 0    ; variável para guardar a posição vertical do objeto a desenhar
+
 ; ******************************************************************************
 ; * Código
 ; ******************************************************************************
@@ -203,7 +204,8 @@ move_asteroide_4:       ; TEMP!
 sobe_sonda:                   ; TEMP!
     MOV R10, 0                ; coloca o numero do som (0)
     MOV [SELECIONA_VID], R10  ; seleciona o som
-    MOV [SELECIONA_VID], R10  ; toca o som
+    MOV [PLAY_VID], R10  ; toca o som
+    
     MOV R10, [VAR_MSONDA_POS] ; coloca a posição da sonda do meio em R10 
     
     PUSH R10
