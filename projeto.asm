@@ -96,6 +96,7 @@ VAR_TECCOUNT: WORD -1   ; variável para guardar o contador para conversão de t
 VAR_ENERGIA: WORD 000FFEH   ; variável para guardar a energia (ver constante ENERGIA_BASE)
 
 VAR_COR_PIXEL: WORD COR_PIXEL ; variável para guardar a cor do pixel, default é vermelho
+VAR_PROX_SOM: WORD 0          ; variável para guardar o próximo som a tocar, default é 0
 
 VAR_COR_SONDA: WORD 0FFC0H    ; variável para guardar a cor da sonda, default é amarelo
 VAR_MSONDA_POS: WORD NAVE_Y-1 ; variável para guardar a posição da sonda do meio (default é NAVE_Y+1)
@@ -250,6 +251,13 @@ atualiza_asteroide:           ; TEMP - assume R0, R1 e R2 como os endreços das 
     PUSH R11
     PUSH R4
     PUSH R5
+
+    PUSH R0
+    MOV R0, 1
+    MOV [VAR_PROX_SOM], R0    ; coloca o numero do som (1), whilhelm.wav
+    CALL toca_som             ; toca o som
+    POP R0
+
     MOV R10, [R0]             ; coloca a posição vertical do asteroide em R10
     MOV R11, [R1]             ; coloca a posição horizontal do asteroide em R11
     MOV R4, DEF_CLEAR_AST     ; coloca o endereço da tabela do asteroide em R4
@@ -281,10 +289,12 @@ reset_asteroide:              ; TEMP!! Assume ainda o asteroide 0 - De futuro, d
     RET
 
 sobe_sonda:                   ; TEMP!
-    MOV R10, 0                ; coloca o numero do som (0)
-    MOV [SELECIONA_VID], R10  ; seleciona o som
-    MOV [PLAY_VID], R10       ; toca o som
-    
+    PUSH R0
+    MOV R0, 0
+    MOV [VAR_PROX_SOM], R0    ; coloca o numero do som (0) em R0, probe.wav 
+    CALL toca_som             ; toca o som
+    POP R0
+
     MOV R10, [VAR_MSONDA_POS] ; coloca a posição da sonda do meio em R10 
     
     PUSH R10
@@ -456,7 +466,13 @@ escreve_pixel:              ; ROTINA ASSUME REGISTOS LIMPOS, NUNCA CHAMAR DE FOR
     POP R0                  
     RET
 
-
+toca_som:
+    PUSH R0
+    MOV R0, [VAR_PROX_SOM]  ; coloca o próximo som a tocar em R0
+    MOV [SELECIONA_VID], R0  ; seleciona o som
+    MOV [PLAY_VID], R0       ; toca o som
+    POP R0
+    RET
 
 fim :                  ; fim do programa (ciclo infinito)
     JMP   fim
