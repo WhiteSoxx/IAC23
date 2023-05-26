@@ -68,7 +68,7 @@ CAST_ESC		EQU	0F442H		; cor do pixel: contorno do asteroide em ARGB
 CAST_CLR		EQU	0F985H		; cor do pixel: preenchimento do asteroide em ARGB
 VERMELHO       	EQU	0FF00H		; cor do pixel: ponta da nave em ARGB 
 CINZ_ESC		EQU	0F666H		; cor do pixel: contorno da nave em ARGB
-CINZENTO		    EQU	0F888H		; cor do pixel: preenchimento da nave em ARGB 
+CINZENTO		EQU	0F888H		; cor do pixel: preenchimento da nave em ARGB 
 CINZ_CLR		EQU	0F999H		; cor do pixel: preenchimento da nave em ARGB
 AZUL_CLR		EQU	0F79CH		; cor do pixel: preenchimento da nave em ARGB 
 AZUL_ESC		EQU	0F58AH		; cor do pixel: preenchimento da nave em ARGB
@@ -161,24 +161,24 @@ DEF_NAVE: WORD LARGURA_NAVE
 inicio:		
 ; inicializações
     MOV  SP, SP_inicial; inicializa Stack Pointer
+    
+    MOV R1, 0                
+    MOV  [APAGA_AVISO], R1	; apaga o aviso de nenhum cenário selecionado (o valor de R1 não é relevante)
+    MOV  [APAGA_ECRÃ], R1	; apaga todos os pixels já desenhados (o valor de R1 não é relevante)
+    MOV [SELECIONA_CENARIO], R1 ; seleciona o cenário 0
+
+    CALL desenha_nave
 
     MOV  R2, TEC_LIN   ; endereço do periférico das linhas
     MOV  R3, TEC_COL   ; endereço do periférico das colunas
     MOV  R4, DISPLAYS  ; endereço do periférico dos displays
     MOV  R5, MASCARA   ; para isolar os 4 bits de menor peso, ao ler as colunas do teclado
-
     MOV  R7, LINHA_MAX ; "teto" para linha maxima a testar (4ª linha, 1000b) 
 
     MOV  R1, ENERGIA_BASE   ; inicializa a energia
     MOV  [VAR_ENERGIA], R1  ; inicializa a energia
     MOV  [R4], R1           ; inicializa o valor do display da energia
-    MOV R1, 0               ; inicializa a linha atual
 
-    MOV  [APAGA_AVISO], R1	; apaga o aviso de nenhum cenário selecionado (o valor de R1 não é relevante)
-    MOV  [APAGA_ECRÃ], R1	; apaga todos os pixels já desenhados (o valor de R1 não é relevante)
-    MOV [SELECIONA_CENARIO], R1 ; seleciona o cenário 1
-
-    CALL desenha_nave
     JMP tec_ciclo     ; ciclo de detecção de teclas
 
 ; corpo principal do programa
@@ -487,10 +487,5 @@ toca_som:
     POP R0
     RET
 
-
 fim :                  ; fim do programa (ciclo infinito)
     JMP   fim
-
-; ******************************************************************************
-; * Interrupções
-; ******************************************************************************
