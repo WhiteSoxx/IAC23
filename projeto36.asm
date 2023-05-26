@@ -88,17 +88,16 @@ COLISAO_ASTEROIDE EQU 25       ; altura máxima que o asteroide deve atingir
 pilha:
 	STACK 100H			; espaçco reservado para a pilha 
 						; (200H bytes, pois são 100H words)
-SP_inicial:				; este é o endereço (1200H) com que o SP deve ser 
-						; inicializado. O 1.ÿ end. de retorno será
-						; armazenado em 11FEH (1200H-2)
+SP_inicial:				; este é o endereço (1200H) com que o SP deve ser inicializado.
+
 imagem_hexa:
 	BYTE	00H			; imagem em memória dos displays hexadecimais 
 						; (inicializada a zero, mas podia ser outro valor qualquer).
 
-VAR_LINHA:  WORD 0      ; variável para guardar a linha atual
-VAR_COLUNA: WORD 0      ; variável para guardar a coluna atual
-VAR_TECCOUNT: WORD -1   ; variável para guardar o contador para conversão de teclas
-VAR_ENERGIA: WORD 000FFEH   ; variável para guardar a energia (ver constante ENERGIA_BASE)
+VAR_LINHA:  WORD 0            ; variável para guardar a linha atual
+VAR_COLUNA: WORD 0            ; variável para guardar a coluna atual
+VAR_TECCOUNT: WORD -1         ; variável para guardar o contador para conversão de teclas
+VAR_ENERGIA: WORD 000FFEH     ; variável para guardar a energia (ver constante ENERGIA_BASE)
 
 VAR_COR_PIXEL: WORD COR_PIXEL ; variável para guardar a cor do pixel, default é vermelho
 VAR_PROX_SOM: WORD 0          ; variável para guardar o próximo som a tocar, default é 0
@@ -124,12 +123,11 @@ VAR_POS_V_ALVO: WORD 0    ; variável para guardar a posição vertical do objet
 DEF_ASTEROIDE:					; tabela que define o asteroide (cor, largura, pixels)
 	WORD		LARGURA_AST     ; [DEF_AST + 0] largura do asteroide 1228
     WORD        LARGURA_AST     ; [DEF_AST + 2] altura do asteroide, igual a largura 122A
-    WORD		         0, CAST_ESC, CAST_ESC, CAST_ESC, 0		        ; [DEF_AST + 4 + 2*col + 2*col*lin] 
-
-	WORD		CAST_ESC, CAST_CLR, CAST_CLR, CAST_CLR, CAST_ESC		;
-    WORD		CAST_ESC, CAST_CLR, CAST_CLR, CAST_CLR, CAST_ESC		;
-    WORD		CAST_ESC, CAST_CLR, CAST_CLR, CAST_CLR, CAST_ESC      ;
-    WORD		         0, CAST_ESC, CAST_ESC, CAST_ESC, 0		        ;
+    WORD		       0, CAST_ESC, CAST_ESC, CAST_ESC, 0		    ; [DEF_AST + 4 + 2*col + 2*col*lin] 
+	WORD		CAST_ESC, CAST_CLR, CAST_CLR, CAST_CLR, CAST_ESC	;
+    WORD		CAST_ESC, CAST_CLR, CAST_CLR, CAST_CLR, CAST_ESC	;
+    WORD		CAST_ESC, CAST_CLR, CAST_CLR, CAST_CLR, CAST_ESC    ;
+    WORD		       0, CAST_ESC, CAST_ESC, CAST_ESC, 0		    ;
 
 DEF_CLEAR_AST:				; tabela que define o asteroide (cor, largura, pixels)
     WORD		LARGURA_AST
@@ -140,19 +138,20 @@ DEF_CLEAR_AST:				; tabela que define o asteroide (cor, largura, pixels)
     WORD		0, 0, 0, 0, 0		;
     WORD		0, 0, 0, 0, 0		;
 
-DEF_NAVE: WORD LARGURA_NAVE
-          WORD ALTURA_NAVE
-          WORD 0, 0, 0, 0, 0, 0, VERMELHO, 0, 0, 0, 0, 0, 0          
-          WORD 0, 0, 0, 0, 0, CINZ_ESC, CINZ_ESC, CINZ_ESC, 0, 0, 0, 0, 0          
-          WORD 0, 0, 0, 0, CINZ_ESC, CINZ_CLR, CINZENTO, CINZ_CLR, CINZ_ESC, 0, 0, 0, 0          
-          WORD 0, 0, CINZ_ESC, 0, CINZ_ESC, AZUL_CLR, AZUL_CLR, AZUL_CLR, CINZ_ESC, 0, CINZ_ESC, 0, 0
-          WORD 0, CINZ_ESC, CINZ_CLR, CINZ_ESC, CINZ_ESC, AZUL_ESC, AZUL_ESC, AZUL_ESC, CINZ_ESC, CINZ_ESC, CINZ_CLR, CINZ_ESC, 0         
-          WORD CINZ_ESC, ROXO, CINZ_CLR, ROXO, CINZ_ESC, CINZENTO, CINZENTO, CINZENTO, CINZ_ESC, ROXO, CINZ_CLR, ROXO, CINZ_ESC           
-          WORD CINZ_ESC, CINZ_CLR, CINZ_CLR, CINZ_CLR, CINZ_ESC, CINZENTO, CINZENTO, CINZENTO, CINZ_ESC, CINZ_CLR, CINZ_CLR, CINZ_CLR, CINZ_ESC         
-          WORD CINZ_ESC, ROXO, CINZ_CLR, ROXO, CINZ_ESC, CINZENTO, CINZENTO, CINZENTO, CINZ_ESC, ROXO, CINZ_CLR, ROXO, CINZ_ESC 
-          WORD 0, CINZ_ESC, CINZ_CLR, CINZ_ESC, CINZ_CLR, CINZENTO, CINZENTO, CINZENTO, CINZ_CLR, CINZ_ESC, CINZ_CLR, CINZ_ESC, 0         
-          WORD 0, 0, CINZ_ESC, 0, 0, CINZ_CLR, CINZ_CLR, CINZ_CLR, 0, 0, CINZ_ESC, 0, 0                   
-        
+DEF_NAVE: 
+    WORD LARGURA_NAVE
+    WORD ALTURA_NAVE
+    WORD 0, 0, 0, 0, 0, 0, VERMELHO, 0, 0, 0, 0, 0, 0          
+    WORD 0, 0, 0, 0, 0, CINZ_ESC, CINZ_ESC, CINZ_ESC, 0, 0, 0, 0, 0          
+    WORD 0, 0, 0, 0, CINZ_ESC, CINZ_CLR, CINZENTO, CINZ_CLR, CINZ_ESC, 0, 0, 0, 0          
+    WORD 0, 0, CINZ_ESC, 0, CINZ_ESC, AZUL_CLR, AZUL_CLR, AZUL_CLR, CINZ_ESC, 0, CINZ_ESC, 0, 0
+    WORD 0, CINZ_ESC, CINZ_CLR, CINZ_ESC, CINZ_ESC, AZUL_ESC, AZUL_ESC, AZUL_ESC, CINZ_ESC, CINZ_ESC, CINZ_CLR, CINZ_ESC, 0         
+    WORD CINZ_ESC, ROXO, CINZ_CLR, ROXO, CINZ_ESC, CINZENTO, CINZENTO, CINZENTO, CINZ_ESC, ROXO, CINZ_CLR, ROXO, CINZ_ESC           
+    WORD CINZ_ESC, CINZ_CLR, CINZ_CLR, CINZ_CLR, CINZ_ESC, CINZENTO, CINZENTO, CINZENTO, CINZ_ESC, CINZ_CLR, CINZ_CLR, CINZ_CLR, CINZ_ESC         
+    WORD CINZ_ESC, ROXO, CINZ_CLR, ROXO, CINZ_ESC, CINZENTO, CINZENTO, CINZENTO, CINZ_ESC, ROXO, CINZ_CLR, ROXO, CINZ_ESC 
+    WORD 0, CINZ_ESC, CINZ_CLR, CINZ_ESC, CINZ_CLR, CINZENTO, CINZENTO, CINZENTO, CINZ_CLR, CINZ_ESC, CINZ_CLR, CINZ_ESC, 0         
+    WORD 0, 0, CINZ_ESC, 0, 0, CINZ_CLR, CINZ_CLR, CINZ_CLR, 0, 0, CINZ_ESC, 0, 0                   
+
 
 ; ******************************************************************************
 ; * Código
@@ -181,11 +180,9 @@ inicio:
 
     JMP tec_ciclo     ; ciclo de detecção de teclas
 
-; corpo principal do programa
-
-
-
-; ciclo de detecção de teclas
+; *********************************************************************************
+; Ciclo de detecção de teclas
+; *********************************************************************************
 tec_ciclo:
     MOV  R1, 1         ; para guardar o valor da linha a ser testada
     MOV  R8, 0         ; registo de ID de teclas
@@ -241,7 +238,9 @@ ha_tecla:              ; neste ciclo espera-se até NENHUMA tecla estar premida
     POP R1             ; "limpa" da pilha a linha atual
     JMP  tec_ciclo     ; se não houver, repete-se o ciclo de teste do teclado
 
-; ações do teclado
+;*********************************************************************************
+; Ações do teclado
+;*********************************************************************************
 ; CUIDADO C PUSH E POPS AQUI, DOIS BUÉ FRAGEIS NAS TRES TAGS ACIMA!!!
 
 debug_asteroide:        ; TEMP! - Hardcoded de forma que o asteroide 0 se mova para a direita de forma obrigatória  
@@ -341,7 +340,9 @@ dec_display:                  ; TEMP!
     MOV [VAR_ENERGIA], R10    ; atualiza o valor da energia
     JMP ha_tecla              ; ação efetuada, não testar teclado novamente
 
-; graficos
+; *********************************************************************************
+; Graficos e Sprites
+; *********************************************************************************
 
 desenha_nave:
     PUSH R0
@@ -349,9 +350,9 @@ desenha_nave:
     PUSH R4
     PUSH R10
     PUSH R11
-    MOV R10, NAVE_Y 
-    MOV R11, NAVE_X 
-    MOV R4, DEF_NAVE
+    MOV R10, NAVE_Y  ; coloca a posição vertical do canto do sprite da nave em R10
+    MOV R11, NAVE_X  ; coloca a posição horizontal do canto do sprite da nave em R11
+    MOV R4, DEF_NAVE ; coloca o endereço da tabela do sprite da nave em R4
     CALL desenha_sprite 
     POP R11
     POP R10
@@ -371,10 +372,6 @@ desenha_sonda:
     MOV R3, [VAR_COR_SONDA] ; coloca a cor da sonda do meio em R3
 
     CALL escreve_pixel      ; escreve o pixel na posição da sonda do meio
-;    ADD R1, 1               ; decrementa a posição a desenhar (cauda da sonda)
-;    CALL escreve_pixel      ; escreve o pixel na posição da sonda do meio
-;    SUB R1, 1               ; decrementa a posição a desenhar (cauda da sonda)
-;    CALL escreve_pixel      ; escreve o pixel na posição da sonda do meio
     ADD R1, 1               ; coloca em R2 a posição da sonda a apagar 
     MOV R3, 00000H          ; coloca em R3 a cor transparente
     CALL escreve_pixel      ; apaga o pixel na posição anterior da sonda do meio
@@ -392,9 +389,8 @@ desenha_asteroide:
     PUSH R6
     PUSH R10
     PUSH R11
-   ; SUB R4, 2               ; IDK WHY, MAS FUNCIONA??
-    SUB R10, 2              ; R10 contem o canto do asteroide
-    SUB R11, 2              ; R11 contem o canto do asteroide
+    SUB R10, 2              ; R10 contem a coordenada vertical do canto do asteroide
+    SUB R11, 2              ; R11 contem a coordenada horizontal do canto do asteroide
     MOV R0, 0               ; O sprite é desenhado a a partir da sua primeira linha  
     CALL desenha_sprite     ; MODIFICA R1 e R0, R5 e R6, FAZER POP APÓS CHAMADA
     POP R11
@@ -406,24 +402,25 @@ desenha_asteroide:
     POP R0                  ; recupera o valor de R0
     RET    
 
-desenha_sprite:             ; desenha um sprite arbitrário. R0 e R1 contam a atual linha e coluna, resp.
-    MOV R1, 0
-    MOV R5, [R4]            ; coloca a largura do sprite em R5
-    ADD R4, 2      
-    MOV R6, [R4]            ; coloca a altura do sprite em R6   
-    SUB R4, 2      
-    CMP R0, R6              ; se já desenhou todas as linhas do sprite
-    JNZ desenha_linha
+; Desenha um sprite arbitrário, linha a linha, definido em tabela
+desenha_sprite:       ; Assume presente em (R10, R11) a posição do canto superior esquerdo do sprite
+                      ; Assume presente em R4 o endereço da tabela do sprite, exemplificada acima
+    MOV R1, 0         ; R1 contem a coordenada vertical atual, ou a linha
+    MOV R5, [R4]      ; coloca a largura do sprite em R5
+    ADD R4, 2         ; R4+2 contem o endereço da altura do sprite
+    MOV R6, [R4]      ; coloca a altura do sprite em R6   
+    SUB R4, 2         ; R4 contem o endereço da largura do sprite
+    CMP R0, R6        ; Se não se desenhou a ultima linha do sprite
+    JNZ desenha_linha ; avança para a próxima linha
     RET
 
-desenha_linha:              ; desenha uma linha arbitrária
+desenha_linha:              ; Desenha uma linha arbitrária, usada por desenha_sprite
     PUSH R1
     PUSH R2
     PUSH R3
     PUSH R4
 
-    SHL R1, 1               ; As seguintes instruções colocam em R4 a coordenada da informação do pixel a desenhar
-   
+    SHL R1, 1               
     PUSH R0                 ; guarda o valor de R0
     PUSH R1
     MOV R1, 2
@@ -459,19 +456,19 @@ desenha_linha:              ; desenha uma linha arbitrária
     ADD R0, 1
     JMP desenha_sprite     ; Desenha a linha seguinte
 
-escreve_pixel:              ; ROTINA ASSUME REGISTOS LIMPOS, NUNCA CHAMAR DE FORMA AUTONOMA
+escreve_pixel:              
     PUSH R0
     MOV R0, MEMORIA_ECRA
 
-    PUSH R1                 ; guarda o valor de R1
-    PUSH R2                 ; guarda o valor de R2
-    PUSH R3                 ; guarda o valor de R3
-    ; É assumido presente em R1 a linha e em R2 a coluna, em R3 a cor
-	SHL	R1, 6			    ; linha * 64
-    ADD  R1, R2			    ; linha * 64 + coluna
-    SHL  R1, 1		     	; * 2, para ter o endereço da palavra
-	ADD	R0, R1		    	; MEMORIA_ECRA + 2 * (linha * 64 + coluna)
-	MOV	[R0], R3		   	; escreve cor no pixel
+    PUSH R1                ; guarda o valor de R1
+    PUSH R2                ; guarda o valor de R2
+    PUSH R3                ; guarda o valor de R3
+                           ; É assumido presente em R1 a linha e em R2 a coluna, em R3 a cor
+	SHL	R1, 6		       ; linha * 64
+    ADD  R1, R2		       ; linha * 64 + coluna
+    SHL  R1, 1		   	   ; * 2, para ter o endereço da palavra
+	ADD	R0, R1		       ; MEMORIA_ECRA + 2 * (linha * 64 + coluna)
+	MOV	[R0], R3		   ; escreve cor no pixel
     
     POP R3
     POP R2
@@ -481,11 +478,9 @@ escreve_pixel:              ; ROTINA ASSUME REGISTOS LIMPOS, NUNCA CHAMAR DE FOR
 
 toca_som:
     PUSH R0
-    MOV R0, [VAR_PROX_SOM]  ; coloca o próximo som a tocar em R0
+    MOV R0, [VAR_PROX_SOM]   ; coloca o próximo som a tocar em R0
     MOV [SELECIONA_VID], R0  ; seleciona o som
     MOV [PLAY_VID], R0       ; toca o som
     POP R0
     RET
 
-fim :                  ; fim do programa (ciclo infinito)
-    JMP   fim
