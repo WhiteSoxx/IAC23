@@ -23,7 +23,19 @@ ENERGIA_BASE EQU 00064H   ; energia inicial
 
 TEC_0      EQU 00011H  ; tecla 0
 TEC_1      EQU 00012H  ; tecla 1
+TEC_2      EQU 00014H  ; tecla 2
+TEC_3      EQU 00018H  ; tecla 3
+TEC_4      EQU 00021H  ; tecla 4
+TEC_5      EQU 00022H  ; tecla 5
+TEC_6      EQU 00024H  ; tecla 6
+TEC_7      EQU 00028H  ; tecla 7
+TEC_8      EQU 00041H  ; tecla 8
+TEC_9      EQU 00042H  ; tecla 9
+TEC_A      EQU 00044H  ; tecla A
+TEC_B      EQU 00048H  ; tecla B
 TEC_C      EQU 00081H  ; tecla C
+TEC_D      EQU 00082H  ; tecla D
+TEC_E      EQU 00084H  ; tecla E
 TEC_F      EQU 00088H  ; tecla F
 
 ; ******************************************************************************
@@ -59,6 +71,8 @@ NAVE_X     EQU  25
 NAVE_Y     EQU  28
 LARGURA_NAVE EQU 15
 ALTURA_NAVE EQU 4
+
+COLISAO_ASTEROIDE EQU 25       ; altura máxima que o asteroide deve atingir
 
 RED        EQU 0FF00H
 
@@ -236,6 +250,7 @@ atualiza_asteroide:           ; TEMP - assume R0, R1 e R2 como os endreços das 
     PUSH R10
     PUSH R11
     PUSH R4
+    PUSH R5
     MOV R10, [R0]             ; coloca a posição vertical do asteroide em R10
     MOV R11, [R1]             ; coloca a posição horizontal do asteroide em R11
     MOV R4, DEF_CLEAR_AST   ; coloca o endereço da tabela do asteroide em R4
@@ -243,9 +258,24 @@ atualiza_asteroide:           ; TEMP - assume R0, R1 e R2 como os endreços das 
     ADD R10, 1                ; incrementa a posição vertical do asteroide
     ADD R11, R2               ; incrementa a posição horizontal do asteroide
     MOV R4, DEF_ASTEROIDE   ; coloca o endereço da tabela do asteroide em R4
-    CALL desenha_asteroide    ; desenha o asteroide na nova posição
+    MOV R5, COLISAO_ASTEROIDE  ; coloca a altura máxima que o asteroide deve atingir em R5
+    CMP R11, R5               ; se o asteroide já estiver no fundo
+    JZ reset_asteroide
+    CALL desenha_asteroide    ; caso contrário, desenha o asteroide na nova posição
     MOV [R0], R10             ; atualiza a posição vertical do asteroide
     MOV [R1], R11             ; atualiza a posição horizontal do asteroide
+    POP R5
+    POP R4
+    POP R11
+    POP R10
+    RET
+
+reset_asteroide:
+    MOV R10, 1                ; coloca a posição vertical default do asteroide em R10
+    MOV R11, 1                ; coloca a posição horizontal default do asteroide em R11
+    MOV [R0], R10               ; coloca a posição vertical do asteroide em R1
+    MOV [R1], R11               ; coloca a posição horizontal do asteroide em R2
+    POP R5
     POP R4
     POP R11
     POP R10
