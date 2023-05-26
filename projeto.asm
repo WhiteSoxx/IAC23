@@ -64,15 +64,15 @@ N_COLUNAS       EQU  64        ; número de colunas do ecrã (largura)
 COR_PIXEL       EQU 0FF00H     ; cor do pixel: vermelho em ARGB (opaco e vermelho no máximo, verde e azul a 0)
 
 LARGURA_AST		EQU	5			; largura do asteroide
-COR_PIXEL1		EQU	0F442H		; cor do pixel: contorno do asteroide em ARGB 
-COR_PIXEL2		EQU	0F985H		; cor do pixel: preenchimento do asteroide em ARGB
-COR_PIXEL3  	EQU	0FF00H		; cor do pixel: ponta da nave em ARGB 
-COR_PIXEL4		EQU	0F666H		; cor do pixel: contorno da nave em ARGB
-COR_PIXEL5		EQU	0F888H		; cor do pixel: preenchimento da nave em ARGB 
-COR_PIXEL6		EQU	0F999H		; cor do pixel: preenchimento da nave em ARGB
-COR_PIXEL7		EQU	0F79CH		; cor do pixel: preenchimento da nave em ARGB 
-COR_PIXEL8		EQU	0F58AH		; cor do pixel: preenchimento da nave em ARGB
-COR_PIXEL9		EQU	0F827H		; cor do pixel: preenchimento da nave em ARGB
+CAST_ESC		EQU	0F442H		; cor do pixel: contorno do asteroide em ARGB 
+CAST_CLR		EQU	0F985H		; cor do pixel: preenchimento do asteroide em ARGB
+VERMELHO       	EQU	0FF00H		; cor do pixel: ponta da nave em ARGB 
+CINZ_ESC		EQU	0F666H		; cor do pixel: contorno da nave em ARGB
+CINZENTO		    EQU	0F888H		; cor do pixel: preenchimento da nave em ARGB 
+CINZ_CLR		EQU	0F999H		; cor do pixel: preenchimento da nave em ARGB
+AZUL_CLR		EQU	0F79CH		; cor do pixel: preenchimento da nave em ARGB 
+AZUL_ESC		EQU	0F58AH		; cor do pixel: preenchimento da nave em ARGB
+ROXO	     	EQU	0F827H		; cor do pixel: preenchimento da nave em ARGB
 
 NAVE_X     EQU  26
 NAVE_Y     EQU  22
@@ -80,8 +80,6 @@ LARGURA_NAVE EQU 13
 ALTURA_NAVE EQU 10
 
 COLISAO_ASTEROIDE EQU 25       ; altura máxima que o asteroide deve atingir
-
-RED        EQU 0FF00H
 
 ; *********************************************************************************
 ; * Dados 
@@ -126,12 +124,12 @@ VAR_POS_V_ALVO: WORD 0    ; variável para guardar a posição vertical do objet
 DEF_ASTEROIDE:					; tabela que define o asteroide (cor, largura, pixels)
 	WORD		LARGURA_AST     ; [DEF_AST + 0] largura do asteroide 1228
     WORD        LARGURA_AST     ; [DEF_AST + 2] altura do asteroide, igual a largura 122A
-    WORD		         0, COR_PIXEL1, COR_PIXEL1, COR_PIXEL1, 0		        ; [DEF_AST + 4 + 2*col + 2*col*lin] 
+    WORD		         0, CAST_ESC, CAST_ESC, CAST_ESC, 0		        ; [DEF_AST + 4 + 2*col + 2*col*lin] 
 
-	WORD		COR_PIXEL1, COR_PIXEL2, COR_PIXEL2, COR_PIXEL2, COR_PIXEL1		;
-    WORD		COR_PIXEL1, COR_PIXEL2, COR_PIXEL2, COR_PIXEL2, COR_PIXEL1		;
-    WORD		COR_PIXEL1, COR_PIXEL2, COR_PIXEL2, COR_PIXEL2, COR_PIXEL1      ;
-    WORD		         0, COR_PIXEL1, COR_PIXEL1, COR_PIXEL1, 0		        ;
+	WORD		CAST_ESC, CAST_CLR, CAST_CLR, CAST_CLR, CAST_ESC		;
+    WORD		CAST_ESC, CAST_CLR, CAST_CLR, CAST_CLR, CAST_ESC		;
+    WORD		CAST_ESC, CAST_CLR, CAST_CLR, CAST_CLR, CAST_ESC      ;
+    WORD		         0, CAST_ESC, CAST_ESC, CAST_ESC, 0		        ;
 
 DEF_CLEAR_AST:				; tabela que define o asteroide (cor, largura, pixels)
     WORD		LARGURA_AST
@@ -144,16 +142,16 @@ DEF_CLEAR_AST:				; tabela que define o asteroide (cor, largura, pixels)
 
 DEF_NAVE: WORD LARGURA_NAVE
           WORD ALTURA_NAVE
-          WORD 0, 0, 0, 0, 0, 0, COR_PIXEL3, 0, 0, 0, 0, 0, 0          
-          WORD 0, 0, 0, 0, 0, COR_PIXEL4, COR_PIXEL4, COR_PIXEL4, 0, 0, 0, 0, 0          
-          WORD 0, 0, 0, 0, COR_PIXEL4, COR_PIXEL6, COR_PIXEL5, COR_PIXEL6, COR_PIXEL4, 0, 0, 0, 0          
-          WORD 0, 0, COR_PIXEL4, 0, COR_PIXEL4, COR_PIXEL7, COR_PIXEL7, COR_PIXEL7, COR_PIXEL4, 0, COR_PIXEL4, 0, 0
-          WORD 0, COR_PIXEL4, COR_PIXEL6, COR_PIXEL4, COR_PIXEL4, COR_PIXEL8, COR_PIXEL8, COR_PIXEL8, COR_PIXEL4, COR_PIXEL4, COR_PIXEL6, COR_PIXEL4, 0         
-          WORD COR_PIXEL4, COR_PIXEL9, COR_PIXEL6, COR_PIXEL9, COR_PIXEL4, COR_PIXEL5, COR_PIXEL5, COR_PIXEL5, COR_PIXEL4, COR_PIXEL9, COR_PIXEL6, COR_PIXEL9, COR_PIXEL4           
-          WORD COR_PIXEL4, COR_PIXEL6, COR_PIXEL6, COR_PIXEL6, COR_PIXEL4, COR_PIXEL5, COR_PIXEL5, COR_PIXEL5, COR_PIXEL4, COR_PIXEL6, COR_PIXEL6, COR_PIXEL6, COR_PIXEL4         
-          WORD COR_PIXEL4, COR_PIXEL9, COR_PIXEL6, COR_PIXEL9, COR_PIXEL4, COR_PIXEL5, COR_PIXEL5, COR_PIXEL5, COR_PIXEL4, COR_PIXEL9, COR_PIXEL6, COR_PIXEL9, COR_PIXEL4 
-          WORD 0, COR_PIXEL4, COR_PIXEL6, COR_PIXEL4, COR_PIXEL6, COR_PIXEL5, COR_PIXEL5, COR_PIXEL5, COR_PIXEL6, COR_PIXEL4, COR_PIXEL6, COR_PIXEL4, 0         
-          WORD 0, 0, COR_PIXEL4, 0, 0, COR_PIXEL6, COR_PIXEL6, COR_PIXEL6, 0, 0, COR_PIXEL4, 0, 0                   
+          WORD 0, 0, 0, 0, 0, 0, VERMELHO, 0, 0, 0, 0, 0, 0          
+          WORD 0, 0, 0, 0, 0, CINZ_ESC, CINZ_ESC, CINZ_ESC, 0, 0, 0, 0, 0          
+          WORD 0, 0, 0, 0, CINZ_ESC, CINZ_CLR, CINZENTO, CINZ_CLR, CINZ_ESC, 0, 0, 0, 0          
+          WORD 0, 0, CINZ_ESC, 0, CINZ_ESC, AZUL_CLR, AZUL_CLR, AZUL_CLR, CINZ_ESC, 0, CINZ_ESC, 0, 0
+          WORD 0, CINZ_ESC, CINZ_CLR, CINZ_ESC, CINZ_ESC, AZUL_ESC, AZUL_ESC, AZUL_ESC, CINZ_ESC, CINZ_ESC, CINZ_CLR, CINZ_ESC, 0         
+          WORD CINZ_ESC, ROXO, CINZ_CLR, ROXO, CINZ_ESC, CINZENTO, CINZENTO, CINZENTO, CINZ_ESC, ROXO, CINZ_CLR, ROXO, CINZ_ESC           
+          WORD CINZ_ESC, CINZ_CLR, CINZ_CLR, CINZ_CLR, CINZ_ESC, CINZENTO, CINZENTO, CINZENTO, CINZ_ESC, CINZ_CLR, CINZ_CLR, CINZ_CLR, CINZ_ESC         
+          WORD CINZ_ESC, ROXO, CINZ_CLR, ROXO, CINZ_ESC, CINZENTO, CINZENTO, CINZENTO, CINZ_ESC, ROXO, CINZ_CLR, ROXO, CINZ_ESC 
+          WORD 0, CINZ_ESC, CINZ_CLR, CINZ_ESC, CINZ_CLR, CINZENTO, CINZENTO, CINZENTO, CINZ_CLR, CINZ_ESC, CINZ_CLR, CINZ_ESC, 0         
+          WORD 0, 0, CINZ_ESC, 0, 0, CINZ_CLR, CINZ_CLR, CINZ_CLR, 0, 0, CINZ_ESC, 0, 0                   
         
 
 ; ******************************************************************************
@@ -324,7 +322,7 @@ sobe_sonda:                   ; TEMP!
 
 reset_sonda:
     
-    MOV R10, 25               ; coloca a posição da sonda do meio em R10 
+    MOV R10, NAVE_Y-2         ; coloca a posição da sonda do meio em R10 
     MOV [VAR_MSONDA_POS], R10 ; atualiza a posição da sonda do meio
     CALL desenha_sonda        ; desenha a sonda do meio na posição atual
     JMP ha_tecla              ; ação efetuada, não testar teclado novamente
