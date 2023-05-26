@@ -23,7 +23,19 @@ ENERGIA_BASE EQU 00064H   ; energia inicial
 
 TEC_0      EQU 00011H  ; tecla 0
 TEC_1      EQU 00012H  ; tecla 1
+TEC_2      EQU 00014H  ; tecla 2
+TEC_3      EQU 00018H  ; tecla 3
+TEC_4      EQU 00021H  ; tecla 4
+TEC_5      EQU 00022H  ; tecla 5
+TEC_6      EQU 00024H  ; tecla 6
+TEC_7      EQU 00028H  ; tecla 7
+TEC_8      EQU 00041H  ; tecla 8
+TEC_9      EQU 00042H  ; tecla 9
+TEC_A      EQU 00044H  ; tecla A
+TEC_B      EQU 00048H  ; tecla B
 TEC_C      EQU 00081H  ; tecla C
+TEC_D      EQU 00082H  ; tecla D
+TEC_E      EQU 00084H  ; tecla E
 TEC_F      EQU 00088H  ; tecla F
 
 ; ******************************************************************************
@@ -60,6 +72,8 @@ NAVE_Y     EQU  28
 LARGURA_NAVE EQU 15
 ALTURA_NAVE EQU 4
 
+COLISAO_ASTEROIDE EQU 25       ; altura máxima que o asteroide deve atingir
+
 RED        EQU 0FF00H
 
 ; *********************************************************************************
@@ -82,6 +96,7 @@ VAR_TECCOUNT: WORD -1   ; variável para guardar o contador para conversão de t
 VAR_ENERGIA: WORD 000FFEH   ; variável para guardar a energia (ver constante ENERGIA_BASE)
 
 VAR_COR_PIXEL: WORD COR_PIXEL ; variável para guardar a cor do pixel, default é vermelho
+VAR_PROX_SOM: WORD 0          ; variável para guardar o próximo som a tocar, default é 0
 
 VAR_COR_SONDA: WORD 0FFC0H    ; variável para guardar a cor da sonda, default é amarelo
 VAR_MSONDA_POS: WORD NAVE_Y-1 ; variável para guardar a posição da sonda do meio (default é NAVE_Y+1)
@@ -104,7 +119,7 @@ VAR_POS_V_ALVO: WORD 0    ; variável para guardar a posição vertical do objet
 DEF_ASTEROIDE:					; tabela que define o asteroide (cor, largura, pixels)
 	WORD		LARGURA_AST     ; [DEF_AST + 0] largura do asteroide 1228
     WORD        LARGURA_AST     ; [DEF_AST + 2] altura do asteroide, igual a largura 122A
-    WORD		         0, COR_PIXEL1, COR_PIXEL1, COR_PIXEL1, 0		       ; [DEF_AST + 4 + 2 * col + 10 * lin] 122C
+    WORD		         0, COR_PIXEL1, COR_PIXEL1, COR_PIXEL1, 0		        ; [DEF_AST + 4 + 2*col + 2*col*lin] 
 	WORD		COR_PIXEL1, COR_PIXEL2, COR_PIXEL2, COR_PIXEL2, COR_PIXEL1		;
     WORD		COR_PIXEL1, COR_PIXEL2, COR_PIXEL2, COR_PIXEL2, COR_PIXEL1		;
     WORD		COR_PIXEL1, COR_PIXEL2, COR_PIXEL2, COR_PIXEL2, COR_PIXEL1      ;
@@ -142,10 +157,10 @@ inicio:
 
     MOV  R7, LINHA_MAX ; "teto" para linha maxima a testar (4ª linha, 1000b) 
 
-    MOV  R1, ENERGIA_BASE  ; inicializa a energia
-    MOV  [VAR_ENERGIA], R1 ; inicializa a energia
-    MOV  [R4], R1          ; inicializa o valor do display da energia
-    MOV R1, 0              ; inicializa a linha atual
+    MOV  R1, ENERGIA_BASE   ; inicializa a energia
+    MOV  [VAR_ENERGIA], R1  ; inicializa a energia
+    MOV  [R4], R1           ; inicializa o valor do display da energia
+    MOV R1, 0               ; inicializa a linha atual
 
     MOV  [APAGA_AVISO], R1	; apaga o aviso de nenhum cenário selecionado (o valor de R1 não é relevante)
     MOV  [APAGA_ECRÃ], R1	; apaga todos os pixels já desenhados (o valor de R1 não é relevante)
@@ -177,7 +192,6 @@ espera_tecla:          ; neste ciclo espera-se até uma tecla ser premida
     PUSH R1            ; guarda a linha atual na pilha
     SHL  R1, 4         ; coloca linha no nibble high
     OR   R1, R0        ; junta coluna (nibble low)
-    ;MOV [R4], R1       ; escreve linha e coluna nos displays
     PUSH R1            ; guarda a linha e coluna na pilha
 
 testa_tecla:
@@ -218,7 +232,7 @@ ha_tecla:              ; neste ciclo espera-se até NENHUMA tecla estar premida
 ; ações do teclado
 ; CUIDADO C PUSH E POPS AQUI, DOIS BUÉ FRAGEIS NAS TRES TAGS ACIMA!!!
 
-debug_asteroide:
+debug_asteroide:        ; TEMP! - Hardcoded de forma que o asteroide 0 se mova para a direita de forma obrigatória  
     PUSH R0
     PUSH R1
     PUSH R2
@@ -236,26 +250,51 @@ atualiza_asteroide:           ; TEMP - assume R0, R1 e R2 como os endreços das 
     PUSH R10
     PUSH R11
     PUSH R4
+    PUSH R5
+
+    PUSH R0
+    MOV R0, 1
+    MOV [VAR_PROX_SOM], R0    ; coloca o numero do som (1), whilhelm.wav
+    CALL toca_som             ; toca o som
+    POP R0
+
     MOV R10, [R0]             ; coloca a posição vertical do asteroide em R10
     MOV R11, [R1]             ; coloca a posição horizontal do asteroide em R11
-    MOV R4, DEF_CLEAR_AST   ; coloca o endereço da tabela do asteroide em R4
-    CALL desenha_asteroide      ; apaga o asteroide na posição atual
+    MOV R4, DEF_CLEAR_AST     ; coloca o endereço da tabela do asteroide em R4
+    CALL desenha_asteroide    ; apaga o asteroide na posição atual
     ADD R10, 1                ; incrementa a posição vertical do asteroide
     ADD R11, R2               ; incrementa a posição horizontal do asteroide
-    MOV R4, DEF_ASTEROIDE   ; coloca o endereço da tabela do asteroide em R4
-    CALL desenha_asteroide    ; desenha o asteroide na nova posição
+    MOV R4, DEF_ASTEROIDE     ; coloca o endereço da tabela do asteroide em R4
+    MOV R5, COLISAO_ASTEROIDE ; coloca a altura máxima que o asteroide deve atingir em R5
+    CMP R11, R5               ; se o asteroide já estiver no fundo
+    JZ reset_asteroide
+    CALL desenha_asteroide    ; caso contrário, desenha o asteroide na nova posição
     MOV [R0], R10             ; atualiza a posição vertical do asteroide
     MOV [R1], R11             ; atualiza a posição horizontal do asteroide
+    POP R5
+    POP R4
+    POP R11
+    POP R10
+    RET
+
+reset_asteroide:              ; TEMP!! Assume ainda o asteroide 0 - De futuro, definir variáveis é necessário
+    MOV R10, 1                ; coloca a posição vertical default do asteroide em R10
+    MOV R11, 1                ; coloca a posição horizontal default do asteroide em R11
+    MOV [R0], R10             ; coloca a posição vertical do asteroide em R1
+    MOV [R1], R11             ; coloca a posição horizontal do asteroide em R2
+    POP R5
     POP R4
     POP R11
     POP R10
     RET
 
 sobe_sonda:                   ; TEMP!
-    MOV R10, 0                ; coloca o numero do som (0)
-    MOV [SELECIONA_VID], R10  ; seleciona o som
-    MOV [PLAY_VID], R10  ; toca o som
-    
+    PUSH R0
+    MOV R0, 0
+    MOV [VAR_PROX_SOM], R0    ; coloca o numero do som (0) em R0, probe.wav 
+    CALL toca_som             ; toca o som
+    POP R0
+
     MOV R10, [VAR_MSONDA_POS] ; coloca a posição da sonda do meio em R10 
     
     PUSH R10
@@ -264,7 +303,7 @@ sobe_sonda:                   ; TEMP!
     CALL desenha_sonda        ; desenha a sonda do meio na posição atual
     
     POP R10
-    CMP R10, 0               ; se a sonda já estiver no topo
+    CMP R10, 0                ; se a sonda já estiver no topo
     JZ reset_sonda
 
     JMP ha_tecla              ; ação efetuada, não testar teclado novamente
@@ -276,19 +315,19 @@ reset_sonda:
     CALL desenha_sonda        ; desenha a sonda do meio na posição atual
     JMP ha_tecla              ; ação efetuada, não testar teclado novamente
 
-inc_display:                ; TEMP!
-    MOV R10, [VAR_ENERGIA]  ; coloca o valor do display em R1
-    ADD R10, 0001b          ; incrementa o valor do display
-    MOV [R4], R10           ; atualiza o valor do display
-    MOV [VAR_ENERGIA], R10  ; atualiza o valor da energia
-    JMP ha_tecla            ; ação efetuada, não testar teclado novamente
+inc_display:                  ; TEMP!
+    MOV R10, [VAR_ENERGIA]    ; coloca o valor do display em R1
+    ADD R10, 0001b            ; incrementa o valor do display
+    MOV [R4], R10             ; atualiza o valor do display
+    MOV [VAR_ENERGIA], R10    ; atualiza o valor da energia
+    JMP ha_tecla              ; ação efetuada, não testar teclado novamente
   
-dec_display:                ; TEMP!
-    MOV R10, [VAR_ENERGIA]  ; coloca o valor do display em R1
-    SUB R10, 0001b          ; decrementa o valor do display
-    MOV [R4], R10           ; atualiza o valor do display
-    MOV [VAR_ENERGIA], R10  ; atualiza o valor da energia
-    JMP ha_tecla            ; ação efetuada, não testar teclado novamente
+dec_display:                  ; TEMP!
+    MOV R10, [VAR_ENERGIA]    ; coloca o valor do display em R1
+    SUB R10, 0001b            ; decrementa o valor do display
+    MOV [R4], R10             ; atualiza o valor do display
+    MOV [VAR_ENERGIA], R10    ; atualiza o valor da energia
+    JMP ha_tecla              ; ação efetuada, não testar teclado novamente
 
 ; graficos
 
@@ -298,10 +337,10 @@ desenha_nave:
     PUSH R4
     PUSH R10
     PUSH R11
-    MOV R10, NAVE_Y
-    MOV R11, NAVE_X ; BUG, EXCEPTION N0 10H, R1 tem q ser igual a zero em draw sprite??
+    MOV R10, NAVE_Y 
+    MOV R11, NAVE_X 
     MOV R4, DEF_NAVE
-    CALL desenha_sprite
+    CALL desenha_sprite 
     POP R11
     POP R10
     POP R4
@@ -365,35 +404,35 @@ desenha_sprite:             ; desenha um sprite arbitrário. R0 e R1 contam a at
     JNZ desenha_linha
     RET
 
-desenha_linha:             ; desenha uma linha arbitrária
+desenha_linha:              ; desenha uma linha arbitrária
     PUSH R1
     PUSH R2
     PUSH R3
     PUSH R4
 
-    SHL R1, 1              ; As seguintes instruções colocam em R4 a coordenada da informação do pixel a desenhar
+    SHL R1, 1               ; As seguintes instruções colocam em R4 a coordenada da informação do pixel a desenhar
    
     PUSH R0                 ; guarda o valor de R0
     PUSH R1
     MOV R1, 2
-    MUL R0, R5             ; multiplica a linha atual por 2*col
+    MUL R0, R5              ; multiplica a linha atual por 2*col
     MUL R0, R1
     POP R1
 
-    ADD R4, R1             ;
+    ADD R4, R1             
     ADD R4, R0
     ADD R4, 4              
-    MOV R3, [R4]           ; coloca a cor do pixel em R3
+    MOV R3, [R4]            ; coloca a cor do pixel em R3
 
-    SHR R1, 1              ; retorna o contador ao normal
-    POP R0                 ; recupera o valor de R0
-    MOV R2, R11            ; coloca a posição horizontal do pixel referência em R2
-    ADD R2, R1             ; "aponta" para a coluna atual
+    SHR R1, 1               ; retorna o contador ao normal
+    POP R0                  ; recupera o valor de R0
+    MOV R2, R11             ; coloca a posição horizontal do pixel referência em R2
+    ADD R2, R1              ; "aponta" para a coluna atual
 
-    MOV R1, R10            ; coloca a posição vertical do pixel em R1
-    ADD R1, R0             ; "aponta" para a linha atualS
+    MOV R1, R10             ; coloca a posição vertical do pixel em R1
+    ADD R1, R0              ; "aponta" para a linha atualS
 
-    CALL escreve_pixel     ; R1 altura R2 largura R3 cor
+    CALL escreve_pixel      ; R1 altura R2 largura R3 cor
 
     POP R4
     POP R3
@@ -427,7 +466,13 @@ escreve_pixel:              ; ROTINA ASSUME REGISTOS LIMPOS, NUNCA CHAMAR DE FOR
     POP R0                  
     RET
 
-
+toca_som:
+    PUSH R0
+    MOV R0, [VAR_PROX_SOM]  ; coloca o próximo som a tocar em R0
+    MOV [SELECIONA_VID], R0  ; seleciona o som
+    MOV [PLAY_VID], R0       ; toca o som
+    POP R0
+    RET
 
 fim :                  ; fim do programa (ciclo infinito)
     JMP   fim
