@@ -1521,13 +1521,13 @@
     "image paths" : [ "assets/bgidea1.png", "assets/bgidea2.png" ],
     "sounds/videos settings" : [ {
       "filePathName" : "assets/probe.wav",
-      "relative sound volume" : 1.0,
+      "relative sound volume" : 0.8,
       "relative start time" : 0.0,
       "relative stop time" : 1.0,
       "playAsClip" : true
     }, {
-      "filePathName" : "assets/whilhelm.wav",
-      "relative sound volume" : 1.0,
+      "filePathName" : "assets/asteroide.wav",
+      "relative sound volume" : 0.8,
       "relative start time" : 0.0,
       "relative stop time" : 1.0,
       "playAsClip" : true
