@@ -66,11 +66,18 @@ COR_PIXEL       EQU 0FF00H     ; cor do pixel: vermelho em ARGB (opaco e vermelh
 LARGURA_AST		EQU	5			; largura do asteroide
 COR_PIXEL1		EQU	0F442H		; cor do pixel: contorno do asteroide em ARGB 
 COR_PIXEL2		EQU	0F985H		; cor do pixel: preenchimento do asteroide em ARGB
+COR_PIXEL3  	EQU	0FF00H		; cor do pixel: ponta da nave em ARGB 
+COR_PIXEL4		EQU	0F666H		; cor do pixel: contorno da nave em ARGB
+COR_PIXEL5		EQU	0F888H		; cor do pixel: preenchimento da nave em ARGB 
+COR_PIXEL6		EQU	0F999H		; cor do pixel: preenchimento da nave em ARGB
+COR_PIXEL7		EQU	0F79CH		; cor do pixel: preenchimento da nave em ARGB 
+COR_PIXEL8		EQU	0F58AH		; cor do pixel: preenchimento da nave em ARGB
+COR_PIXEL9		EQU	0F827H		; cor do pixel: preenchimento da nave em ARGB
 
-NAVE_X     EQU  25
-NAVE_Y     EQU  28
-LARGURA_NAVE EQU 15
-ALTURA_NAVE EQU 4
+NAVE_X     EQU  26
+NAVE_Y     EQU  22
+LARGURA_NAVE EQU 13
+ALTURA_NAVE EQU 10
 
 COLISAO_ASTEROIDE EQU 25       ; altura máxima que o asteroide deve atingir
 
@@ -120,6 +127,7 @@ DEF_ASTEROIDE:					; tabela que define o asteroide (cor, largura, pixels)
 	WORD		LARGURA_AST     ; [DEF_AST + 0] largura do asteroide 1228
     WORD        LARGURA_AST     ; [DEF_AST + 2] altura do asteroide, igual a largura 122A
     WORD		         0, COR_PIXEL1, COR_PIXEL1, COR_PIXEL1, 0		        ; [DEF_AST + 4 + 2*col + 2*col*lin] 
+
 	WORD		COR_PIXEL1, COR_PIXEL2, COR_PIXEL2, COR_PIXEL2, COR_PIXEL1		;
     WORD		COR_PIXEL1, COR_PIXEL2, COR_PIXEL2, COR_PIXEL2, COR_PIXEL1		;
     WORD		COR_PIXEL1, COR_PIXEL2, COR_PIXEL2, COR_PIXEL2, COR_PIXEL1      ;
@@ -136,10 +144,16 @@ DEF_CLEAR_AST:				; tabela que define o asteroide (cor, largura, pixels)
 
 DEF_NAVE: WORD LARGURA_NAVE
           WORD ALTURA_NAVE
-          WORD 0, 0 ,RED,RED,RED,RED,RED,RED,RED,RED,RED,RED,RED,   0 , 0          
-          WORD 0,  RED,RED,RED,RED,RED,RED,RED,RED,RED,RED,RED,RED,RED, 0           
-          WORD RED,RED,RED,RED,RED,RED,RED,RED,RED,RED,RED,RED,RED,RED,RED          
-          WORD RED,RED,RED,RED,RED,RED,RED,RED,RED,RED,RED,RED,RED,RED,RED          
+          WORD 0, 0, 0, 0, 0, 0, COR_PIXEL3, 0, 0, 0, 0, 0, 0          
+          WORD 0, 0, 0, 0, 0, COR_PIXEL4, COR_PIXEL4, COR_PIXEL4, 0, 0, 0, 0, 0          
+          WORD 0, 0, 0, 0, COR_PIXEL4, COR_PIXEL6, COR_PIXEL5, COR_PIXEL6, COR_PIXEL4, 0, 0, 0, 0          
+          WORD 0, 0, COR_PIXEL4, 0, COR_PIXEL4, COR_PIXEL7, COR_PIXEL7, COR_PIXEL7, COR_PIXEL4, 0, COR_PIXEL4, 0, 0
+          WORD 0, COR_PIXEL4, COR_PIXEL6, COR_PIXEL4, COR_PIXEL4, COR_PIXEL8, COR_PIXEL8, COR_PIXEL8, COR_PIXEL4, COR_PIXEL4, COR_PIXEL6, COR_PIXEL4, 0         
+          WORD COR_PIXEL4, COR_PIXEL9, COR_PIXEL6, COR_PIXEL9, COR_PIXEL4, COR_PIXEL5, COR_PIXEL5, COR_PIXEL5, COR_PIXEL4, COR_PIXEL9, COR_PIXEL6, COR_PIXEL9, COR_PIXEL4           
+          WORD COR_PIXEL4, COR_PIXEL6, COR_PIXEL6, COR_PIXEL6, COR_PIXEL4, COR_PIXEL5, COR_PIXEL5, COR_PIXEL5, COR_PIXEL4, COR_PIXEL6, COR_PIXEL6, COR_PIXEL6, COR_PIXEL4         
+          WORD COR_PIXEL4, COR_PIXEL9, COR_PIXEL6, COR_PIXEL9, COR_PIXEL4, COR_PIXEL5, COR_PIXEL5, COR_PIXEL5, COR_PIXEL4, COR_PIXEL9, COR_PIXEL6, COR_PIXEL9, COR_PIXEL4 
+          WORD 0, COR_PIXEL4, COR_PIXEL6, COR_PIXEL4, COR_PIXEL6, COR_PIXEL5, COR_PIXEL5, COR_PIXEL5, COR_PIXEL6, COR_PIXEL4, COR_PIXEL6, COR_PIXEL4, 0         
+          WORD 0, 0, COR_PIXEL4, 0, 0, COR_PIXEL6, COR_PIXEL6, COR_PIXEL6, 0, 0, COR_PIXEL4, 0, 0                   
         
 
 ; ******************************************************************************
@@ -233,6 +247,7 @@ ha_tecla:              ; neste ciclo espera-se até NENHUMA tecla estar premida
 ; CUIDADO C PUSH E POPS AQUI, DOIS BUÉ FRAGEIS NAS TRES TAGS ACIMA!!!
 
 debug_asteroide:        ; TEMP! - Hardcoded de forma que o asteroide 0 se mova para a direita de forma obrigatória  
+
     PUSH R0
     PUSH R1
     PUSH R2
@@ -250,8 +265,8 @@ atualiza_asteroide:           ; TEMP - assume R0, R1 e R2 como os endreços das 
     PUSH R10
     PUSH R11
     PUSH R4
-    PUSH R5
 
+    PUSH R5
     PUSH R0
     MOV R0, 1
     MOV [VAR_PROX_SOM], R0    ; coloca o numero do som (1), whilhelm.wav
@@ -294,7 +309,6 @@ sobe_sonda:                   ; TEMP!
     MOV [VAR_PROX_SOM], R0    ; coloca o numero do som (0) em R0, probe.wav 
     CALL toca_som             ; toca o som
     POP R0
-
     MOV R10, [VAR_MSONDA_POS] ; coloca a posição da sonda do meio em R10 
     
     PUSH R10
@@ -415,6 +429,7 @@ desenha_linha:              ; desenha uma linha arbitrária
     PUSH R0                 ; guarda o valor de R0
     PUSH R1
     MOV R1, 2
+
     MUL R0, R5              ; multiplica a linha atual por 2*col
     MUL R0, R1
     POP R1
@@ -473,6 +488,7 @@ toca_som:
     MOV [PLAY_VID], R0       ; toca o som
     POP R0
     RET
+
 
 fim :                  ; fim do programa (ciclo infinito)
     JMP   fim
