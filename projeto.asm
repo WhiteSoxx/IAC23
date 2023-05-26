@@ -56,11 +56,11 @@ COR_PIXEL1		EQU	0F442H		; cor do pixel: contorno do asteroide em ARGB
 COR_PIXEL2		EQU	0F985H		; cor do pixel: preenchimento do asteroide em ARGB
 
 NAVE_X     EQU  25
-NAVE_Y     EQU  27
+NAVE_Y     EQU  28
 LARGURA_NAVE EQU 15
 ALTURA_NAVE EQU 4
 
-RED        EQU 0FFC0H
+RED        EQU 0FF00H
 
 ; *********************************************************************************
 ; * Dados 
@@ -84,7 +84,7 @@ VAR_ENERGIA: WORD 000FFEH   ; variável para guardar a energia (ver constante EN
 VAR_COR_PIXEL: WORD COR_PIXEL ; variável para guardar a cor do pixel, default é vermelho
 
 VAR_COR_SONDA: WORD 0FFC0H    ; variável para guardar a cor da sonda, default é amarelo
-VAR_MSONDA_POS: WORD 25 ; variável para guardar a posição da sonda do meio (default é 25+1 (artefacto de desenha_sonda))
+VAR_MSONDA_POS: WORD NAVE_Y-1 ; variável para guardar a posição da sonda do meio (default é NAVE_Y+1)
 
 VAR_AST_POS_V_0: WORD 1   ; variável para guardar a posição vertical do asteroide 0
 VAR_AST_POS_V_1: WORD 2   ; variável para guardar a posição vertical do asteroide 1
@@ -296,10 +296,14 @@ desenha_nave:
     PUSH R0
     PUSH R1
     PUSH R4
-    MOV R0, NAVE_Y
-    MOV R1, NAVE_X ; BUG, EXCEPTION N0 10H, R1 tem q ser igual a zero em draw sprite??
+    PUSH R10
+    PUSH R11
+    MOV R10, NAVE_Y
+    MOV R11, NAVE_X ; BUG, EXCEPTION N0 10H, R1 tem q ser igual a zero em draw sprite??
     MOV R4, DEF_NAVE
     CALL desenha_sprite
+    POP R11
+    POP R10
     POP R4
     POP R1
     POP R0
