@@ -208,18 +208,12 @@ testa_tecla:
     POP R1             ; retira da pilha a linha e coluna da tecla premida
 
     MOV R8, TEC_0      ; coloca o ID da tecla 0 em R8
-    PUSH R0            ; guarda o valor de R0
-    MOV R0, -1
     CMP R1, R8
-    JZ  sum_display
-    POP R0
+    JZ  dec_display
 
     MOV R8, TEC_1      ; coloca o ID da tecla 1 em R8
-    PUSH R0
-    MOV R0, 1
-    CMP R1, R8         
-    JZ  sum_display
-    POP R0
+    CMP R1, R8        
+    JZ  inc_display 
 
     MOV R8, TEC_C      ; coloca o ID da tecla C em R8
     CMP R1, R8         
@@ -332,17 +326,21 @@ reset_sonda:
     CALL desenha_sonda        ; desenha a sonda do meio na posição atual
     JMP ha_tecla              ; ação efetuada, não testar teclado novamente
 
-sum_display:                  ; TEMP!
-
+inc_display:
     MOV R10, [VAR_ENERGIA]    ; coloca o valor da energia em R10
-    ADD R10, R0               ; altera o valor da energia
+    ADD R10, 1                ; altera o valor da energia
     MOV [VAR_ENERGIA], R10    ; atualiza o valor da energia
+    JMP sum_display
 
+dec_display:
+    MOV R10, [VAR_ENERGIA]    ; coloca o valor da energia em R10
+    SUB R10, -1                ; altera o valor da energia
+    MOV [VAR_ENERGIA], R10    ; atualiza o valor da energia
+    JMP sum_display
 
+sum_display:                  ; TEMP!
     CALL hex_para_dec         ; Altera o valor em R10 para "decimal"
-
     MOV [R4], R10             ; atualiza o valor do display
-
     JMP ha_tecla              ; ação efetuada, não testar teclado novamente
 
 hex_para_dec:
