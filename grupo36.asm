@@ -120,6 +120,8 @@ VAR_AST_POS_H_4: WORD 3   ; variável para guardar a posição horizontal do ast
 VAR_POS_H_ALVO: WORD 0    ; variável para guardar a posição horizontal do objeto a desenhar
 VAR_POS_V_ALVO: WORD 0    ; variável para guardar a posição vertical do objeto a desenhar
 
+VAR_STATUS: WORD 0        ; variável para guardar o estado do jogo (0 - jogo não iniciado, 1 - jogo iniciado)
+
 DEF_ASTEROIDE:					; tabela que define o asteroide (cor, largura, pixels)
 	WORD		LARGURA_AST     ; [DEF_AST + 0] largura do asteroide 1228
     WORD        LARGURA_AST     ; [DEF_AST + 2] altura do asteroide, igual a largura 122A
@@ -161,12 +163,10 @@ inicio:
 ; inicializações
     MOV  SP, SP_inicial; inicializa Stack Pointer
     
-    MOV R1, 0                
+    MOV R1, 1                
     MOV  [APAGA_AVISO], R1	; apaga o aviso de nenhum cenário selecionado (o valor de R1 não é relevante)
     MOV  [APAGA_ECRÃ], R1	; apaga todos os pixels já desenhados (o valor de R1 não é relevante)
-    MOV [SELECIONA_CENARIO], R1 ; seleciona o cenário 0
-
-    CALL desenha_nave
+    MOV [SELECIONA_CENARIO], R1 ; seleciona o cenário 1 (Splash Screen)
 
     MOV  R2, TEC_LIN   ; endereço do periférico das linhas
     MOV  R3, TEC_COL   ; endereço do periférico das colunas
@@ -174,10 +174,30 @@ inicio:
     MOV  R5, MASCARA   ; para isolar os 4 bits de menor peso, ao ler as colunas do teclado
     MOV  R7, LINHA_MAX ; "teto" para linha maxima a testar (4ª linha, 1000b) 
 
-    MOV  R1, ENERGIA_BASE   ; inicializa a energia
-    MOV  [VAR_ENERGIA], R1  ; inicializa a energia
-    MOV  [R4], R1           ; inicializa o valor do display da energia
+    JMP tec_ciclo     ; ciclo de detecção de teclas
 
+
+inicio_jogo:
+    MOV R1, 0
+    MOV [SELECIONA_CENARIO], R1 ; seleciona o cenário 1 (Splash Screen)
+    
+    CALL desenha_nave
+    
+    MOV  R10, ENERGIA_BASE   ; inicializa a energia
+    MOV  [VAR_ENERGIA], R10  ; inicializa a energia
+    CALL hex_para_dec        ; converte o valor da energia para decimal
+    MOV  [R4], R10           ; inicializa o valor do display da energia
+
+    MOV R1, [VAR_STATUS]     ; coloca a variável de estado do jogo em R1
+    MOV R1, 1                ; coloca o valor 1 em R1, para indicar que o jogo está iniciado
+    MOV [VAR_STATUS], R1     ; atualiza o valor da variável de estado do jogo
+
+    MOV  R2, TEC_LIN   ; endereço do periférico das linhas
+    MOV  R3, TEC_COL   ; endereço do periférico das colunas
+    MOV  R4, DISPLAYS  ; endereço do periférico dos displays
+    MOV  R5, MASCARA   ; para isolar os 4 bits de menor peso, ao ler as colunas do teclado
+    MOV  R7, LINHA_MAX ; "teto" para linha maxima a testar (4ª linha, 1000b) 
+    ; ^^^^ SUBSTITUIR POR POPS???????
     JMP tec_ciclo     ; ciclo de detecção de teclas
 
 ; *********************************************************************************
@@ -203,8 +223,13 @@ espera_tecla:          ; neste ciclo espera-se até uma tecla ser premida
     OR   R1, R0        ; junta coluna (nibble low)
     PUSH R1            ; guarda a linha e coluna na pilha
 
-testa_tecla:
+    PUSH R10
+    MOV  R10, [VAR_STATUS]        ; guarda o ID da tecla premida em R8
+    CMP  R10, 0                   ; se o jogo não estiver iniciado
+    JZ testa_start
 
+testa_tecla:
+    POP R10
     POP R1             ; retira da pilha a linha e coluna da tecla premida
 
     MOV R8, TEC_0      ; coloca o ID da tecla 0 em R8
@@ -235,6 +260,16 @@ testa_tecla:
     MOV R8, TEC_F      ; coloca o ID da tecla F em R8
     CMP R1, R8         
     JZ debug_asteroide
+
+    JMP ha_tecla       ; testa se a tecla permanece premida
+
+testa_start:
+    POP R10
+    POP R1             ; retira da pilha a linha e coluna da tecla premida
+
+    MOV R8, TEC_C      ; coloca o ID da tecla 0 em R8
+    CMP R1, R8
+    JZ  inicio_jogo
 
     JMP ha_tecla       ; testa se a tecla permanece premida
 
