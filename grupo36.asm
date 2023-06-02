@@ -74,6 +74,9 @@ AZUL_CLR		EQU	0F79CH		; cor do pixel: preenchimento da nave em ARGB
 AZUL_ESC		EQU	0F58AH		; cor do pixel: preenchimento da nave em ARGB
 ROXO	     	EQU	0F827H		; cor do pixel: preenchimento da nave em ARGB
 
+MSONDA_BASE     EQU 26 - 1      ; posição vertical base da sonda do meio
+SONDA_MAX       EQU 14          ; Altura max da sonda
+
 NAVE_X       EQU  26
 NAVE_Y       EQU  22
 LARGURA_NAVE EQU 13
@@ -81,7 +84,7 @@ ALTURA_NAVE  EQU 10
 
 COLISAO_M_ASTEROIDE EQU 25       ; altura máxima que o asteroide central deve atingir
 COLISAO_L_ASTEROIDE EQU 25       ; altura máxima que os asteroides laterais devem atingir
-FIM_ASTEROIDE       EQU 32       ; altura máxima que os asteroides inocuos devem atingir
+COLISAO_ASTEROIDE       EQU 32       ; altura máxima que os asteroides inocuos devem atingir
 ; *********************************************************************************
 ; * Dados 
 ; *********************************************************************************
@@ -91,13 +94,13 @@ FIM_ASTEROIDE       EQU 32       ; altura máxima que os asteroides inocuos deve
 SP_inicial:				; Stack pointer do programa inicial
 
     STACK 100H          ; espaço reservado para a pilha (200H bytes, ou 100H words)
-SP_teclado:     ; Stack pointer do programa do teclado
+SP_teclado:      ; Stack pointer do programa do teclado
 
     STACK 100H          ; espaço reservado para a pilha (200H bytes, ou 100H words)
 SP_nave:         ; Stack pointer do programa da nave
 
     STACK 100H          ; espaço reservado para a pilha (200H bytes, ou 100H words)
-
+SP_sonda:        ; Stack pointer do programa da sonda
 imagem_hexa:
 	BYTE	00H			; imagem em memória dos displays hexadecimais 
 						; (inicializada a zero, mas podia ser outro valor qualquer).
@@ -110,13 +113,13 @@ VAR_ENERGIA: WORD 000FFEH     ; variável para guardar a energia (ver constante 
 VAR_COR_PIXEL: WORD COR_PIXEL ; variável para guardar a cor do pixel, default é vermelho
 VAR_PROX_SOM:  WORD 0         ; variável para guardar o próximo som a tocar, default é 0
 
-VAR_COR_SONDA:  WORD 0FFC0H   ; variável para guardar a cor da sonda, default é amarelo
-VAR_MSONDA_POS: WORD NAVE_Y-1 ; variável para guardar a posição da sonda do meio (default é NAVE_Y+1)
-VAR_LSONDA_POS: WORD NAVE_Y-1 ; variável para guardar a posição da sonda da esquerda (default é NAVE_Y+1)
-VAR_RSONDA_POS: WORD NAVE_Y-1 ; variável para guardar a posição da sonda da direita (default é NAVE_Y+1)
-VAR_MSONDA_ON:  WORD 0        ; variável para guardar o estado da sonda do meio (0 - desligada, 1 - ligada)
-VAR_LSONDA_ON:  WORD 0        ; variável para guardar o estado da sonda da esquerda (0 - desligada, 1 - ligada)
-VAR_RSONDA_ON:  WORD 0        ; variável para guardar o estado da sonda da direita (0 - desligada, 1 - ligada)
+VAR_COR_SONDA:  WORD 0FFC0H      ; variável para guardar a cor da sonda, default é amarelo
+VAR_MSONDA_POS: WORD MSONDA_BASE ; variável para guardar a posição da sonda do meio (default é NAVE_Y+1)
+VAR_LSONDA_POS: WORD NAVE_Y-1    ; variável para guardar a posição da sonda da esquerda (default é NAVE_Y+1)
+VAR_RSONDA_POS: WORD NAVE_Y-1    ; variável para guardar a posição da sonda da direita (default é NAVE_Y+1)
+VAR_MSONDA_ON:  WORD 0           ; variável para guardar o estado da sonda do meio (0 - desligada, 1 - ligada)
+VAR_LSONDA_ON:  WORD 0           ; variável para guardar o estado da sonda da esquerda (0 - desligada, 1 - ligada)
+VAR_RSONDA_ON:  WORD 0           ; variável para guardar o estado da sonda da direita (0 - desligada, 1 - ligada)
 
 
 VAR_AST_POS_V_0: WORD 1   ; variável para guardar a posição vertical do asteroide 0
@@ -168,13 +171,16 @@ DEF_NAVE:
     WORD 0, CINZ_ESC, CINZ_CLR, CINZ_ESC, CINZ_CLR, CINZENTO, CINZENTO, CINZENTO, CINZ_CLR, CINZ_ESC, CINZ_CLR, CINZ_ESC, 0         
     WORD 0, 0, CINZ_ESC, 0, 0, CINZ_CLR, CINZ_CLR, CINZ_CLR, 0, 0, CINZ_ESC, 0, 0                   
 
+SONDA_LOCK:     LOCK 0
+NAVE_LOCK:      LOCK 0
+
 ; ******************************************************************************
 ; * Tabela de interrupções
 ; ******************************************************************************
 
 tab: 
     WORD 0
-    WORD 0
+    WORD rot_int_1
     WORD 0
     WORD 0
 
@@ -194,8 +200,9 @@ inicio:
     MOV  [APAGA_ECRÃ], R1	; apaga todos os pixels já desenhados (o valor de R1 não é relevante)
     MOV  [SELECIONA_CENARIO], R1 ; seleciona o cenário 1 (Splash Screen)
 
-    CALL teclado      ; inicia o processo do teclado
+    CALL teclado            ; inicia o processo do teclado
     CALL nave               ; inicia o processo da nave
+    CALL sonda             ; inicia o processo das sondas
 
 
 
@@ -244,8 +251,10 @@ testa_tecla:
     POP R1             ; retira da pilha a linha e coluna da tecla premida
 
     MOV R8, TEC_C      ; coloca o ID da tecla C em R8
+    PUSH R0
+    MOV R0, VAR_MSONDA_ON ; coloca o endreço do estado da sonda do meio em R0
     CMP R1, R8         
-    JZ  sobe_sonda
+    JZ  dispara_sonda
 
     MOV R8, TEC_F      ; coloca o ID da tecla F em R8
     CMP R1, R8         
@@ -282,6 +291,21 @@ inicio_jogo:
     MOV R1, [VAR_STATUS]     ; coloca a variável de estado do jogo em R1
     MOV R1, 1                ; coloca o valor 1 em R1, para indicar que o jogo está iniciado
     MOV [VAR_STATUS], R1     ; atualiza o valor da variável de estado do jogo
+    EI
+    JMP tec_ciclo            ; volta ao ciclo principal do teclado
+
+dispara_sonda:    ; Ativa a sonda na posição R0
+    PUSH R1
+    PUSH R2
+    MOV R1, [R0]  ; coloca o estado da sonda do meio em R1
+    MOV R2, 1     ; coloca o valor 1 em R2
+    OR R1, R2      ; liga a sonda do meio, mantem ligada
+
+    MOV [R0], R1  ; atualiza o estado da sonda do meio
+    POP R2  
+    POP R1
+    POP R0
+    JMP ha_tecla
 
 ; *********************************************************************************
 ; Processo - Nave
@@ -293,7 +317,7 @@ nave:
 
     MOV R1, [VAR_STATUS]
     CMP R1, 1
-    JZ aguarda_inicio              
+    JZ aguarda_inicio_n              
 
     EI
     MOV R1, 0
@@ -308,15 +332,17 @@ nave:
     CALL hex_para_dec        ; converte o valor da energia para decimal
     MOV  [R4], R10           ; inicializa o valor do display da energia
 
-    MOV  R4, DISPLAYS  ; endereço do periférico dos displays
+    MOV  R4, DISPLAYS        ; endereço do periférico dos displays
 
-aguarda_inicio:
+    MOV  [NAVE_LOCK], R10 ; bloqueia o update da nave
+aguarda_inicio_n:
     YIELD
     JMP nave
 
 atualiza_nave_loop:
     YIELD
     JMP atualiza_nave_loop
+
 
 ; *********************************************************************************
 ; Ações do teclado
@@ -383,31 +409,65 @@ reset_asteroide:              ; TEMP!! Assume ainda o asteroide 0 - De futuro, d
 ; 
 ;
 ; *********************************************************************************
-sobe_sonda:                   ; TEMP!
-    PUSH R0
-    MOV R0, 0
-    MOV [VAR_PROX_SOM], R0    ; coloca o numero do som (0) em R0, probe.wav 
-    CALL toca_som             ; toca o som
-    POP R0
-    MOV R10, [VAR_MSONDA_POS] ; coloca a posição da sonda do meio em R10 
-    
-    PUSH R10
-    SUB R10, 1                ; decrementa a posição vertical da sonda do meio (sobe)
-    MOV [VAR_MSONDA_POS], R10 ; atualiza a posição da sonda do meio
-    CALL desenha_sonda        ; desenha a sonda do meio na posição atual
-    
-    POP R10
-    CMP R10, 0                ; se a sonda já estiver no topo
-    JZ reset_sonda
+PROCESS SP_sonda
 
-    JMP ha_tecla              ; ação efetuada, não testar teclado novamente
+aguarda_inicio_s:
+    YIELD
+    JMP sonda
+sonda:
+    MOV R1, [VAR_STATUS]
+    CMP R1, 0
+    JZ aguarda_inicio_s
 
-reset_sonda:
-    
-    MOV R10, NAVE_Y-2         ; coloca a posição da sonda do meio em R10 
-    MOV [VAR_MSONDA_POS], R10 ; atualiza a posição da sonda do meio
-    CALL desenha_sonda        ; desenha a sonda do meio na posição atual
-    JMP ha_tecla              ; ação efetuada, não testar teclado novamente
+m_sonda_check:
+    MOV R1, [VAR_MSONDA_ON]  ; coloca o estado da sonda do meio em R1
+    CMP R1, 1                ; se a sonda do meio estiver ligada
+    JZ m_sonda_on            ; salta para o código da sonda do meio ligada
+    JMP sonda                ; caso contrário, verifica a sonda da esquerda
+
+m_sonda_on:
+    MOV R1, [VAR_MSONDA_POS] ; coloca a posição vertical da sonda do meio em R1
+    MOV R2, SONDA_MAX        ; coloca a posição vertical máxima da sonda em R2
+    CMP R1, R2               ; se a sonda do meio estiver na posição mais alta
+    JZ m_sonda_off           ; salta para o código da sonda do meio desligada
+    CALL desenha_msonda      ; desenha a sonda do meio na posição atual
+    SUB R1, 1                ; decrementa a posição vertical da sonda do meio
+    MOV [VAR_MSONDA_POS], R1 ; atualiza a posição vertical da sonda do meio
+    MOV [SONDA_LOCK], R1     ; pára o update da sonda com um valor aleatório
+    JMP sonda                ; volta ao ciclo principal da sonda
+
+m_sonda_off:
+    MOV R1, [VAR_MSONDA_POS] ; coloca a posição vertical da sonda do meio em R1
+    MOV R2, 32               ; coloca a posição horizontal da sonda do meio em R2 (constante 32)
+    MOV R3, 0000H
+    CALL escreve_pixel       ; apaga o pixel na posição da sonda
+
+    MOV R1, MSONDA_BASE      ; coloca a posição vertical base da sonda do meio em R1
+    MOV [VAR_MSONDA_POS], R1 ; atualiza a posição vertical da sonda do meio
+    MOV [SONDA_LOCK], R1      ; bloqueia os updates da sonda 
+    JMP sonda                ; volta ao ciclo principal da sonda
+
+desenha_msonda: 
+    PUSH R0                 ; guarda o valor de R0
+    PUSH R1                 ; guarda o valor de R1
+    PUSH R2                 ; guarda o valor de R2
+    PUSH R3
+
+    MOV R1, [VAR_MSONDA_POS]; coloca a posição vertical da sonda do meio em R1
+    MOV R2, 32              ; coloca a posição horizontal da sonda do meio em R2 (constante 32)
+    MOV R3, [VAR_COR_SONDA] ; coloca a cor da sonda do meio em R3
+
+    CALL escreve_pixel      ; escreve o pixel na posição da sonda do meio
+    ADD R1, 1               ; coloca em R2 a posição da sonda a apagar 
+    MOV R3, 00000H          ; coloca em R3 a cor transparente
+    CALL escreve_pixel      ; apaga o pixel na posição anterior da sonda do meio
+    POP R3
+    POP R2
+    POP R1                  ; recupera o valor de R1
+    POP R0                  ; recupera o valor de R0
+    RET
+
+; *********************************************************************************
 
 sum_display:                  ; TEMP!
 
@@ -486,26 +546,6 @@ desenha_nave:
     POP R4
     POP R1
     POP R0
-    RET
-
-desenha_sonda: 
-    PUSH R0                 ; guarda o valor de R0
-    PUSH R1                 ; guarda o valor de R1
-    PUSH R2                 ; guarda o valor de R2
-    PUSH R3
-
-    MOV R1, [VAR_MSONDA_POS]; coloca a posição vertical da sonda do meio em R1
-    MOV R2, 32              ; coloca a posição horizontal da sonda do meio em R2 (constante 32)
-    MOV R3, [VAR_COR_SONDA] ; coloca a cor da sonda do meio em R3
-
-    CALL escreve_pixel      ; escreve o pixel na posição da sonda do meio
-    ADD R1, 1               ; coloca em R2 a posição da sonda a apagar 
-    MOV R3, 00000H          ; coloca em R3 a cor transparente
-    CALL escreve_pixel      ; apaga o pixel na posição anterior da sonda do meio
-    POP R3
-    POP R2
-    POP R1                  ; recupera o valor de R1
-    POP R0                  ; recupera o valor de R0
     RET
 
 desenha_asteroide:
@@ -622,3 +662,5 @@ toca_som:
     POP R0
     RET
 
+rot_int_1: 
+    MOV [SONDA_LOCK], R0      ; desbloqueia o processo da sonda
