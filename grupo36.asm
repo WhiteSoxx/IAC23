@@ -84,10 +84,18 @@ COLISAO_ASTEROIDE EQU 25       ; altura máxima que o asteroide deve atingir
 ; *********************************************************************************
 ; * Dados 
 ; *********************************************************************************
-	PLACE       1000H
+	PLACE       2000H
 
 	STACK 100H			; espaçco reservado para a pilha (200H bytes, ou 100H words)
 SP_inicial:				; Stack pointer do programa inicial
+
+    STACK 100H          ; espaço reservado para a pilha (200H bytes, ou 100H words)
+SP_teclado:     ; Stack pointer do programa do teclado
+
+    STACK 100H          ; espaço reservado para a pilha (200H bytes, ou 100H words)
+SP_nave:         ; Stack pointer do programa da nave
+
+    STACK 100H          ; espaço reservado para a pilha (200H bytes, ou 100H words)
 
 imagem_hexa:
 	BYTE	00H			; imagem em memória dos displays hexadecimais 
@@ -103,6 +111,7 @@ VAR_PROX_SOM: WORD 0          ; variável para guardar o próximo som a tocar, d
 
 VAR_COR_SONDA: WORD 0FFC0H    ; variável para guardar a cor da sonda, default é amarelo
 VAR_MSONDA_POS: WORD NAVE_Y-1 ; variável para guardar a posição da sonda do meio (default é NAVE_Y+1)
+VAR_LSONDA_POS: WORD NAVE_Y-1 ; variável para guardar a posição da sonda da esquerda (default é NAVE_Y+1)
 
 VAR_AST_POS_V_0: WORD 1   ; variável para guardar a posição vertical do asteroide 0
 VAR_AST_POS_V_1: WORD 2   ; variável para guardar a posição vertical do asteroide 1
@@ -172,53 +181,38 @@ inicio:
 ; inicializações
     MOV  SP, SP_inicial; inicializa Stack Pointer
     
+    MOV BTE, tab      ; coloca o endereço da tabela de interrupções em BTE
+
     MOV R1, 1                
     MOV  [APAGA_AVISO], R1	; apaga o aviso de nenhum cenário selecionado (o valor de R1 não é relevante)
     MOV  [APAGA_ECRÃ], R1	; apaga todos os pixels já desenhados (o valor de R1 não é relevante)
-    MOV [SELECIONA_CENARIO], R1 ; seleciona o cenário 1 (Splash Screen)
+    MOV  [SELECIONA_CENARIO], R1 ; seleciona o cenário 1 (Splash Screen)
 
-    MOV  R2, TEC_LIN   ; endereço do periférico das linhas
-    MOV  R3, TEC_COL   ; endereço do periférico das colunas
-    MOV  R4, DISPLAYS  ; endereço do periférico dos displays
-    MOV  R5, MASCARA   ; para isolar os 4 bits de menor peso, ao ler as colunas do teclado
-    MOV  R7, LINHA_MAX ; "teto" para linha maxima a testar (4ª linha, 1000b) 
-
-    JMP tec_ciclo     ; ciclo de detecção de teclas
+    CALL teclado      ; inicia o processo do teclado
+    CALL nave               ; inicia o processo da nave
 
 
-inicio_jogo:
-    MOV R1, 0
-    MOV [SELECIONA_CENARIO], R1 ; seleciona o cenário 1 (Splash Screen)
-    
-    CALL desenha_nave
-    
-    MOV  R10, ENERGIA_BASE   ; inicializa a energia
-    MOV  [VAR_ENERGIA], R10  ; inicializa a energia
-    CALL hex_para_dec        ; converte o valor da energia para decimal
-    MOV  [R4], R10           ; inicializa o valor do display da energia
-
-    MOV R1, [VAR_STATUS]     ; coloca a variável de estado do jogo em R1
-    MOV R1, 1                ; coloca o valor 1 em R1, para indicar que o jogo está iniciado
-    MOV [VAR_STATUS], R1     ; atualiza o valor da variável de estado do jogo
-
-    MOV  R2, TEC_LIN   ; endereço do periférico das linhas
-    MOV  R3, TEC_COL   ; endereço do periférico das colunas
-    MOV  R4, DISPLAYS  ; endereço do periférico dos displays
-    MOV  R5, MASCARA   ; para isolar os 4 bits de menor peso, ao ler as colunas do teclado
-    MOV  R7, LINHA_MAX ; "teto" para linha maxima a testar (4ª linha, 1000b) 
-    ; ^^^^ SUBSTITUIR POR POPS???????
-    JMP tec_ciclo     ; ciclo de detecção de teclas
 
 ; *********************************************************************************
 ; Processo
 ;
 ; Teclado
 ; *********************************************************************************
+PROCESS SP_teclado
+
+teclado:
+    MOV  R2, TEC_LIN   ; endereço do periférico das linhas
+    MOV  R3, TEC_COL   ; endereço do periférico das colunas
+    MOV  R5, MASCARA   ; para isolar os 4 bits de menor peso, ao ler as colunas do teclado
+    MOV  R7, LINHA_MAX ; "teto" para linha maxima a testar (4ª linha, 1000b) 
+
 tec_ciclo:
     MOV  R1, 1         ; para guardar o valor da linha a ser testada
     MOV  R8, 0         ; registo de ID de teclas
 
 espera_tecla:          ; neste ciclo espera-se até uma tecla ser premida
+    YIELD              ; Ciclo potencialmente bloqueante, cede o processador
+
     MOVB [R2], R1      ; escrever no periférico de saída (linhas)
     MOVB R0, [R3]      ; ler do periférico de entrada (colunas)
     AND  R0, R5        ; elimina bits para além dos bits 0-3
@@ -243,27 +237,6 @@ testa_tecla:
     POP R10
     POP R1             ; retira da pilha a linha e coluna da tecla premida
 
-    MOV R8, TEC_0      ; coloca o ID da tecla 0 em R8
-    PUSH R0            ; guarda o valor de R0
-    MOV R0, -1
-    CMP R1, R8
-    JZ  sum_display
-    POP R0
-
-    MOV R8, TEC_1      ; coloca o ID da tecla 1 em R8
-    PUSH R0
-    MOV R0, 1
-    CMP R1, R8         
-    JZ  sum_display
-    POP R0
-
-    MOV R8, TEC_2      ; coloca o ID da tecla 2 em R8
-    PUSH R0
-    MOV R0, 19H
-    CMP R1, R8         
-    JZ  sum_display
-    POP R0
-
     MOV R8, TEC_C      ; coloca o ID da tecla C em R8
     CMP R1, R8         
     JZ  sobe_sonda
@@ -285,6 +258,8 @@ testa_start:
     JMP ha_tecla       ; testa se a tecla permanece premida
 
 ha_tecla:              ; neste ciclo espera-se até NENHUMA tecla estar premida
+    YIELD              ; Ciclo bloqueante, cede o processador
+
     POP R1             ; retira da pilha a linha atual
     PUSH R1
 
@@ -297,9 +272,49 @@ ha_tecla:              ; neste ciclo espera-se até NENHUMA tecla estar premida
     POP R1             ; "limpa" da pilha a linha atual
     JMP  tec_ciclo     ; se não houver, repete-se o ciclo de teste do teclado
 
-;*********************************************************************************
+inicio_jogo:
+    MOV R1, [VAR_STATUS]     ; coloca a variável de estado do jogo em R1
+    MOV R1, 1                ; coloca o valor 1 em R1, para indicar que o jogo está iniciado
+    MOV [VAR_STATUS], R1     ; atualiza o valor da variável de estado do jogo
+
+; *********************************************************************************
+; Processo - Nave
+; *********************************************************************************
+
+PROCESS SP_nave
+
+nave:
+
+    MOV R1, [VAR_STATUS]
+    CMP R1, 1
+    JZ aguarda_inicio              
+
+    EI
+    MOV R1, 0
+    MOV [SELECIONA_CENARIO], R1 ; seleciona o cenário 1 (Splash Screen)
+    
+    
+    CALL desenha_nave
+    
+    MOV  R4, DISPLAYS  ; endereço do periférico dos displays
+    MOV  R10, ENERGIA_BASE   ; inicializa a energia
+    MOV  [VAR_ENERGIA], R10  ; inicializa a energia
+    CALL hex_para_dec        ; converte o valor da energia para decimal
+    MOV  [R4], R10           ; inicializa o valor do display da energia
+
+    MOV  R4, DISPLAYS  ; endereço do periférico dos displays
+
+aguarda_inicio:
+    YIELD
+    JMP nave
+
+atualiza_nave_loop:
+    YIELD
+    JMP atualiza_nave_loop
+
+; *********************************************************************************
 ; Ações do teclado
-;*********************************************************************************
+; *********************************************************************************
 
 debug_asteroide:        ; TEMP! - Hardcoded de forma que o asteroide 0 se mova para a direita de forma obrigatória  
 
