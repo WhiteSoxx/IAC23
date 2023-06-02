@@ -166,6 +166,7 @@ tab:
 ; ******************************************************************************
 ; * Código
 ; ******************************************************************************
+
     PLACE       0
 inicio:		
 ; inicializações
@@ -209,7 +210,9 @@ inicio_jogo:
     JMP tec_ciclo     ; ciclo de detecção de teclas
 
 ; *********************************************************************************
-; Ciclo de detecção de teclas
+; Processo
+;
+; Teclado
 ; *********************************************************************************
 tec_ciclo:
     MOV  R1, 1         ; para guardar o valor da linha a ser testada
@@ -354,7 +357,11 @@ reset_asteroide:              ; TEMP!! Assume ainda o asteroide 0 - De futuro, d
     POP R11
     POP R10
     RET
-
+; *********************************************************************************
+; Processo - Sondas
+; 
+;
+; *********************************************************************************
 sobe_sonda:                   ; TEMP!
     PUSH R0
     MOV R0, 0
@@ -395,6 +402,15 @@ sum_display:                  ; TEMP!
 
     JMP ha_tecla              ; ação efetuada, não testar teclado novamente
 
+
+; **********************************************************************
+; HEX_PARA_DEC - Converte um valor hexadecimal para um valor pseudo-
+;                -decimal para apresentar nos displays de 7 segmentos
+; Argumentos:   R1 - linha
+;               R2 - coluna
+;               R4 - tabela que define o boneco
+;
+; **********************************************************************
 hex_para_dec:
     PUSH R0
     PUSH R1
