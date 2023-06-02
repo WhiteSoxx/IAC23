@@ -85,10 +85,9 @@ COLISAO_ASTEROIDE EQU 25       ; altura máxima que o asteroide deve atingir
 ; * Dados 
 ; *********************************************************************************
 	PLACE       1000H
-pilha:
-	STACK 100H			; espaçco reservado para a pilha 
-						; (200H bytes, pois são 100H words)
-SP_inicial:				; este é o endereço (1200H) com que o SP deve ser inicializado.
+
+	STACK 100H			; espaçco reservado para a pilha (200H bytes, ou 100H words)
+SP_inicial:				; Stack pointer do programa inicial
 
 imagem_hexa:
 	BYTE	00H			; imagem em memória dos displays hexadecimais 
@@ -154,6 +153,15 @@ DEF_NAVE:
     WORD 0, CINZ_ESC, CINZ_CLR, CINZ_ESC, CINZ_CLR, CINZENTO, CINZENTO, CINZENTO, CINZ_CLR, CINZ_ESC, CINZ_CLR, CINZ_ESC, 0         
     WORD 0, 0, CINZ_ESC, 0, 0, CINZ_CLR, CINZ_CLR, CINZ_CLR, 0, 0, CINZ_ESC, 0, 0                   
 
+; ******************************************************************************
+; * Tabela de interrupções
+; ******************************************************************************
+
+tab: 
+    WORD 0
+    WORD 0
+    WORD 0
+    WORD 0
 
 ; ******************************************************************************
 ; * Código
@@ -289,7 +297,6 @@ ha_tecla:              ; neste ciclo espera-se até NENHUMA tecla estar premida
 ;*********************************************************************************
 ; Ações do teclado
 ;*********************************************************************************
-; CUIDADO C PUSH E POPS AQUI, DOIS BUÉ FRAGEIS NAS TRES TAGS ACIMA!!!
 
 debug_asteroide:        ; TEMP! - Hardcoded de forma que o asteroide 0 se mova para a direita de forma obrigatória  
 
@@ -485,9 +492,17 @@ desenha_asteroide:
     POP R0                  ; recupera o valor de R0
     RET    
 
-; Desenha um sprite arbitrário, linha a linha, definido em tabela
-desenha_sprite:       ; Assume presente em (R10, R11) a posição do canto superior esquerdo do sprite
-                      ; Assume presente em R4 o endereço da tabela do sprite, exemplificada acima
+
+
+; **********************************************************************
+; DESENHA_BONECO - Desenha um sprite a partir do canto superior 
+;                  esquerdo dado, como definido na tabela indicada.
+;                   
+; Argumentos:   R10 - linha
+;               R11 - coluna
+;               R4 - tabela que define o sprite
+; **********************************************************************
+desenha_sprite:       
     MOV R1, 0         ; R1 contem a coordenada vertical atual, ou a linha
     MOV R5, [R4]      ; coloca a largura do sprite em R5
     ADD R4, 2         ; R4+2 contem o endereço da altura do sprite
@@ -559,6 +574,9 @@ escreve_pixel:
     POP R0                  
     RET
 
+; **********************************************************************
+; TOCA_SOM - Toca um som a partir do endereço indicado numa variável.
+; **********************************************************************
 toca_som:
     PUSH R0
     MOV R0, [VAR_PROX_SOM]   ; coloca o próximo som a tocar em R0
