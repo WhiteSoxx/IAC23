@@ -74,13 +74,14 @@ AZUL_CLR		EQU	0F79CH		; cor do pixel: preenchimento da nave em ARGB
 AZUL_ESC		EQU	0F58AH		; cor do pixel: preenchimento da nave em ARGB
 ROXO	     	EQU	0F827H		; cor do pixel: preenchimento da nave em ARGB
 
-NAVE_X     EQU  26
-NAVE_Y     EQU  22
+NAVE_X       EQU  26
+NAVE_Y       EQU  22
 LARGURA_NAVE EQU 13
-ALTURA_NAVE EQU 10
+ALTURA_NAVE  EQU 10
 
-COLISAO_ASTEROIDE EQU 25       ; altura máxima que o asteroide deve atingir
-
+COLISAO_M_ASTEROIDE EQU 25       ; altura máxima que o asteroide central deve atingir
+COLISAO_L_ASTEROIDE EQU 25       ; altura máxima que os asteroides laterais devem atingir
+FIM_ASTEROIDE       EQU 32       ; altura máxima que os asteroides inocuos devem atingir
 ; *********************************************************************************
 ; * Dados 
 ; *********************************************************************************
@@ -107,11 +108,16 @@ VAR_TECCOUNT: WORD -1         ; variável para guardar o contador para conversã
 VAR_ENERGIA: WORD 000FFEH     ; variável para guardar a energia (ver constante ENERGIA_BASE)
 
 VAR_COR_PIXEL: WORD COR_PIXEL ; variável para guardar a cor do pixel, default é vermelho
-VAR_PROX_SOM: WORD 0          ; variável para guardar o próximo som a tocar, default é 0
+VAR_PROX_SOM:  WORD 0         ; variável para guardar o próximo som a tocar, default é 0
 
-VAR_COR_SONDA: WORD 0FFC0H    ; variável para guardar a cor da sonda, default é amarelo
+VAR_COR_SONDA:  WORD 0FFC0H   ; variável para guardar a cor da sonda, default é amarelo
 VAR_MSONDA_POS: WORD NAVE_Y-1 ; variável para guardar a posição da sonda do meio (default é NAVE_Y+1)
 VAR_LSONDA_POS: WORD NAVE_Y-1 ; variável para guardar a posição da sonda da esquerda (default é NAVE_Y+1)
+VAR_RSONDA_POS: WORD NAVE_Y-1 ; variável para guardar a posição da sonda da direita (default é NAVE_Y+1)
+VAR_MSONDA_ON:  WORD 0        ; variável para guardar o estado da sonda do meio (0 - desligada, 1 - ligada)
+VAR_LSONDA_ON:  WORD 0        ; variável para guardar o estado da sonda da esquerda (0 - desligada, 1 - ligada)
+VAR_RSONDA_ON:  WORD 0        ; variável para guardar o estado da sonda da direita (0 - desligada, 1 - ligada)
+
 
 VAR_AST_POS_V_0: WORD 1   ; variável para guardar a posição vertical do asteroide 0
 VAR_AST_POS_V_1: WORD 2   ; variável para guardar a posição vertical do asteroide 1
