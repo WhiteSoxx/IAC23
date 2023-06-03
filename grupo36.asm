@@ -171,8 +171,8 @@ DEF_NAVE:
     WORD 0, CINZ_ESC, CINZ_CLR, CINZ_ESC, CINZ_CLR, CINZENTO, CINZENTO, CINZENTO, CINZ_CLR, CINZ_ESC, CINZ_CLR, CINZ_ESC, 0         
     WORD 0, 0, CINZ_ESC, 0, 0, CINZ_CLR, CINZ_CLR, CINZ_CLR, 0, 0, CINZ_ESC, 0, 0                   
 
-SONDA_LOCK:     LOCK 0
-NAVE_LOCK:      LOCK 0
+SONDA_LOCK: LOCK 0
+NAVE_LOCK: LOCK 0
 
 ; ******************************************************************************
 ; * Tabela de interrupções
@@ -204,270 +204,6 @@ inicio:
     CALL nave               ; inicia o processo da nave
     CALL sonda             ; inicia o processo das sondas
 
-
-
-; *********************************************************************************
-; Processo
-;
-; Teclado
-; *********************************************************************************
-PROCESS SP_teclado
-
-teclado:
-    MOV  R2, TEC_LIN   ; endereço do periférico das linhas
-    MOV  R3, TEC_COL   ; endereço do periférico das colunas
-    MOV  R5, MASCARA   ; para isolar os 4 bits de menor peso, ao ler as colunas do teclado
-    MOV  R7, LINHA_MAX ; "teto" para linha maxima a testar (4ª linha, 1000b) 
-
-tec_ciclo:
-    MOV  R1, 1         ; para guardar o valor da linha a ser testada
-    MOV  R8, 0         ; registo de ID de teclas
-
-espera_tecla:          ; neste ciclo espera-se até uma tecla ser premida
-    YIELD              ; Ciclo potencialmente bloqueante, cede o processador
-
-    MOVB [R2], R1      ; escrever no periférico de saída (linhas)
-    MOVB R0, [R3]      ; ler do periférico de entrada (colunas)
-    AND  R0, R5        ; elimina bits para além dos bits 0-3
-    CMP  R1, R7        ; se já testou as 4 linhas 
-    JZ   tec_ciclo     ; volta à primeira
-    ROL  R1, 1         ; incrementa, apos testada, a linha atual
-    CMP  R0, 0         ; há tecla premida?
-    JZ   espera_tecla  ; se nenhuma tecla premida, repete
-                       ; vai mostrar a linha e a coluna da tecla
-    ROR  R1, 1         ; regressa à linha 
-    PUSH R1            ; guarda a linha atual na pilha
-    SHL  R1, 4         ; coloca linha no nibble high
-    OR   R1, R0        ; junta coluna (nibble low)
-    PUSH R1            ; guarda a linha e coluna na pilha
-
-    PUSH R10
-    MOV  R10, [VAR_STATUS]        ; guarda o ID da tecla premida em R8
-    CMP  R10, 0                   ; se o jogo não estiver iniciado
-    JZ testa_start
-
-testa_tecla:
-    POP R10
-    POP R1             ; retira da pilha a linha e coluna da tecla premida
-
-    MOV R8, TEC_C      ; coloca o ID da tecla C em R8
-    PUSH R0
-    MOV R0, VAR_MSONDA_ON ; coloca o endreço do estado da sonda do meio em R0
-    CMP R1, R8         
-    JZ  dispara_sonda
-
-    MOV R8, TEC_F      ; coloca o ID da tecla F em R8
-    CMP R1, R8         
-    JZ debug_asteroide
-
-    JMP ha_tecla       ; testa se a tecla permanece premida
-
-testa_start:
-    POP R10
-    POP R1             ; retira da pilha a linha e coluna da tecla premida
-
-    MOV R8, TEC_C      ; coloca o ID da tecla 0 em R8
-    CMP R1, R8
-    JZ  inicio_jogo
-
-    JMP ha_tecla       ; testa se a tecla permanece premida
-
-ha_tecla:              ; neste ciclo espera-se até NENHUMA tecla estar premida
-    YIELD              ; Ciclo bloqueante, cede o processador
-
-    POP R1             ; retira da pilha a linha atual
-    PUSH R1
-
-    MOVB [R2], R1      ; escrever no periférico de saída (linhas)
-    MOVB R0, [R3]      ; ler do periférico de entrada (colunas)
-
-    AND  R0, R5        ; elimina bits para além dos bits 0-3
-    CMP  R0, 0         ; há tecla premida?
-    JNZ  ha_tecla      ; se houver uma tecla premida, espera até não haver
-    POP R1             ; "limpa" da pilha a linha atual
-    JMP  tec_ciclo     ; se não houver, repete-se o ciclo de teste do teclado
-
-inicio_jogo:
-    MOV R1, [VAR_STATUS]     ; coloca a variável de estado do jogo em R1
-    MOV R1, 1                ; coloca o valor 1 em R1, para indicar que o jogo está iniciado
-    MOV [VAR_STATUS], R1     ; atualiza o valor da variável de estado do jogo
-    EI
-    JMP tec_ciclo            ; volta ao ciclo principal do teclado
-
-dispara_sonda:    ; Ativa a sonda na posição R0
-    PUSH R1
-    PUSH R2
-    MOV R1, [R0]  ; coloca o estado da sonda do meio em R1
-    MOV R2, 1     ; coloca o valor 1 em R2
-    OR R1, R2      ; liga a sonda do meio, mantem ligada
-
-    MOV [R0], R1  ; atualiza o estado da sonda do meio
-    POP R2  
-    POP R1
-    POP R0
-    JMP ha_tecla
-
-; *********************************************************************************
-; Processo - Nave
-; *********************************************************************************
-
-PROCESS SP_nave
-
-nave:
-
-    MOV R1, [VAR_STATUS]
-    CMP R1, 1
-    JZ aguarda_inicio_n              
-
-    EI
-    MOV R1, 0
-    MOV [SELECIONA_CENARIO], R1 ; seleciona o cenário 1 (Splash Screen)
-    
-    
-    CALL desenha_nave
-    
-    MOV  R4, DISPLAYS  ; endereço do periférico dos displays
-    MOV  R10, ENERGIA_BASE   ; inicializa a energia
-    MOV  [VAR_ENERGIA], R10  ; inicializa a energia
-    CALL hex_para_dec        ; converte o valor da energia para decimal
-    MOV  [R4], R10           ; inicializa o valor do display da energia
-
-    MOV  R4, DISPLAYS        ; endereço do periférico dos displays
-
-    MOV  [NAVE_LOCK], R10 ; bloqueia o update da nave
-aguarda_inicio_n:
-    YIELD
-    JMP nave
-
-atualiza_nave_loop:
-    YIELD
-    JMP atualiza_nave_loop
-
-
-; *********************************************************************************
-; Ações do teclado
-; *********************************************************************************
-
-debug_asteroide:        ; TEMP! - Hardcoded de forma que o asteroide 0 se mova para a direita de forma obrigatória  
-
-    PUSH R0
-    PUSH R1
-    PUSH R2
-    MOV R0, VAR_AST_POS_V_0
-    MOV R1, VAR_AST_POS_H_0
-    MOV R2, 1 ; direção do asteroide, esquerda para a direita
-    CALL atualiza_asteroide
-    POP R2
-    POP R1
-    POP R0
-    JMP ha_tecla
-
-
-atualiza_asteroide:           ; TEMP - assume R0, R1 e R2 como os endreços das coordenadas e a direcção do asteroide
-    PUSH R10
-    PUSH R11
-    PUSH R4
-
-    PUSH R5
-    PUSH R0
-    MOV R0, 1
-    MOV [VAR_PROX_SOM], R0    ; coloca o numero do som (1), whilhelm.wav
-    CALL toca_som             ; toca o som
-    POP R0
-
-    MOV R10, [R0]             ; coloca a posição vertical do asteroide em R10
-    MOV R11, [R1]             ; coloca a posição horizontal do asteroide em R11
-    MOV R4, DEF_CLEAR_AST     ; coloca o endereço da tabela do asteroide em R4
-    CALL desenha_asteroide    ; apaga o asteroide na posição atual
-    ADD R10, 1                ; incrementa a posição vertical do asteroide
-    ADD R11, R2               ; incrementa a posição horizontal do asteroide
-    MOV R4, DEF_ASTEROIDE     ; coloca o endereço da tabela do asteroide em R4
-    MOV R5, COLISAO_ASTEROIDE ; coloca a altura máxima que o asteroide deve atingir em R5
-    CMP R11, R5               ; se o asteroide já estiver no fundo
-    JZ reset_asteroide
-    CALL desenha_asteroide    ; caso contrário, desenha o asteroide na nova posição
-    MOV [R0], R10             ; atualiza a posição vertical do asteroide
-    MOV [R1], R11             ; atualiza a posição horizontal do asteroide
-    POP R5
-    POP R4
-    POP R11
-    POP R10
-    RET
-
-reset_asteroide:              ; TEMP!! Assume ainda o asteroide 0 - De futuro, definir variáveis é necessário
-    MOV R10, 1                ; coloca a posição vertical default do asteroide em R10
-    MOV R11, 1                ; coloca a posição horizontal default do asteroide em R11
-    MOV [R0], R10             ; coloca a posição vertical do asteroide em R1
-    MOV [R1], R11             ; coloca a posição horizontal do asteroide em R2
-    POP R5
-    POP R4
-    POP R11
-    POP R10
-    RET
-; *********************************************************************************
-; Processo - Sondas
-; 
-;
-; *********************************************************************************
-PROCESS SP_sonda
-
-aguarda_inicio_s:
-    YIELD
-    JMP sonda
-sonda:
-    MOV R1, [VAR_STATUS]
-    CMP R1, 0
-    JZ aguarda_inicio_s
-
-m_sonda_check:
-    MOV R1, [VAR_MSONDA_ON]  ; coloca o estado da sonda do meio em R1
-    CMP R1, 1                ; se a sonda do meio estiver ligada
-    JZ m_sonda_on            ; salta para o código da sonda do meio ligada
-    JMP sonda                ; caso contrário, verifica a sonda da esquerda
-
-m_sonda_on:
-    MOV R1, [VAR_MSONDA_POS] ; coloca a posição vertical da sonda do meio em R1
-    MOV R2, SONDA_MAX        ; coloca a posição vertical máxima da sonda em R2
-    CMP R1, R2               ; se a sonda do meio estiver na posição mais alta
-    JZ m_sonda_off           ; salta para o código da sonda do meio desligada
-    CALL desenha_msonda      ; desenha a sonda do meio na posição atual
-    SUB R1, 1                ; decrementa a posição vertical da sonda do meio
-    MOV [VAR_MSONDA_POS], R1 ; atualiza a posição vertical da sonda do meio
-    MOV [SONDA_LOCK], R1     ; pára o update da sonda com um valor aleatório
-    JMP sonda                ; volta ao ciclo principal da sonda
-
-m_sonda_off:
-    MOV R1, [VAR_MSONDA_POS] ; coloca a posição vertical da sonda do meio em R1
-    MOV R2, 32               ; coloca a posição horizontal da sonda do meio em R2 (constante 32)
-    MOV R3, 0000H
-    CALL escreve_pixel       ; apaga o pixel na posição da sonda
-
-    MOV R1, MSONDA_BASE      ; coloca a posição vertical base da sonda do meio em R1
-    MOV [VAR_MSONDA_POS], R1 ; atualiza a posição vertical da sonda do meio
-    MOV [SONDA_LOCK], R1      ; bloqueia os updates da sonda 
-    JMP sonda                ; volta ao ciclo principal da sonda
-
-desenha_msonda: 
-    PUSH R0                 ; guarda o valor de R0
-    PUSH R1                 ; guarda o valor de R1
-    PUSH R2                 ; guarda o valor de R2
-    PUSH R3
-
-    MOV R1, [VAR_MSONDA_POS]; coloca a posição vertical da sonda do meio em R1
-    MOV R2, 32              ; coloca a posição horizontal da sonda do meio em R2 (constante 32)
-    MOV R3, [VAR_COR_SONDA] ; coloca a cor da sonda do meio em R3
-
-    CALL escreve_pixel      ; escreve o pixel na posição da sonda do meio
-    ADD R1, 1               ; coloca em R2 a posição da sonda a apagar 
-    MOV R3, 00000H          ; coloca em R3 a cor transparente
-    CALL escreve_pixel      ; apaga o pixel na posição anterior da sonda do meio
-    POP R3
-    POP R2
-    POP R1                  ; recupera o valor de R1
-    POP R0                  ; recupera o valor de R0
-    RET
-
-; *********************************************************************************
 
 sum_display:                  ; TEMP!
 
@@ -664,3 +400,270 @@ toca_som:
 
 rot_int_1: 
     MOV [SONDA_LOCK], R0      ; desbloqueia o processo da sonda
+
+
+; *********************************************************************************
+; Ações do teclado
+; *********************************************************************************
+
+debug_asteroide:        ; TEMP! - Hardcoded de forma que o asteroide 0 se mova para a direita de forma obrigatória  
+
+    PUSH R0
+    PUSH R1
+    PUSH R2
+    MOV R0, VAR_AST_POS_V_0
+    MOV R1, VAR_AST_POS_H_0
+    MOV R2, 1 ; direção do asteroide, esquerda para a direita
+    CALL atualiza_asteroide
+    POP R2
+    POP R1
+    POP R0
+    JMP ha_tecla
+
+
+atualiza_asteroide:           ; TEMP - assume R0, R1 e R2 como os endreços das coordenadas e a direcção do asteroide
+    PUSH R10
+    PUSH R11
+    PUSH R4
+
+    PUSH R5
+    PUSH R0
+    MOV R0, 1
+    MOV [VAR_PROX_SOM], R0    ; coloca o numero do som (1), whilhelm.wav
+    CALL toca_som             ; toca o som
+    POP R0
+
+    MOV R10, [R0]             ; coloca a posição vertical do asteroide em R10
+    MOV R11, [R1]             ; coloca a posição horizontal do asteroide em R11
+    MOV R4, DEF_CLEAR_AST     ; coloca o endereço da tabela do asteroide em R4
+    CALL desenha_asteroide    ; apaga o asteroide na posição atual
+    ADD R10, 1                ; incrementa a posição vertical do asteroide
+    ADD R11, R2               ; incrementa a posição horizontal do asteroide
+    MOV R4, DEF_ASTEROIDE     ; coloca o endereço da tabela do asteroide em R4
+    MOV R5, COLISAO_ASTEROIDE ; coloca a altura máxima que o asteroide deve atingir em R5
+    CMP R11, R5               ; se o asteroide já estiver no fundo
+    JZ reset_asteroide
+    CALL desenha_asteroide    ; caso contrário, desenha o asteroide na nova posição
+    MOV [R0], R10             ; atualiza a posição vertical do asteroide
+    MOV [R1], R11             ; atualiza a posição horizontal do asteroide
+    POP R5
+    POP R4
+    POP R11
+    POP R10
+    RET
+
+reset_asteroide:              ; TEMP!! Assume ainda o asteroide 0 - De futuro, definir variáveis é necessário
+    MOV R10, 1                ; coloca a posição vertical default do asteroide em R10
+    MOV R11, 1                ; coloca a posição horizontal default do asteroide em R11
+    MOV [R0], R10             ; coloca a posição vertical do asteroide em R1
+    MOV [R1], R11             ; coloca a posição horizontal do asteroide em R2
+    POP R5
+    POP R4
+    POP R11
+    POP R10
+    RET
+
+; *********************************************************************************
+; Processo
+;
+; Teclado
+; *********************************************************************************
+PROCESS SP_teclado
+
+teclado:
+    MOV  R2, TEC_LIN   ; endereço do periférico das linhas
+    MOV  R3, TEC_COL   ; endereço do periférico das colunas
+    MOV  R5, MASCARA   ; para isolar os 4 bits de menor peso, ao ler as colunas do teclado
+    MOV  R7, LINHA_MAX ; "teto" para linha maxima a testar (4ª linha, 1000b) 
+
+tec_ciclo:
+    MOV  R1, 1         ; para guardar o valor da linha a ser testada
+    MOV  R8, 0         ; registo de ID de teclas
+
+espera_tecla:          ; neste ciclo espera-se até uma tecla ser premida
+    YIELD              ; Ciclo potencialmente bloqueante, cede o processador
+
+    MOVB [R2], R1      ; escrever no periférico de saída (linhas)
+    MOVB R0, [R3]      ; ler do periférico de entrada (colunas)
+    AND  R0, R5        ; elimina bits para além dos bits 0-3
+    CMP  R1, R7        ; se já testou as 4 linhas 
+    JZ   tec_ciclo     ; volta à primeira
+    ROL  R1, 1         ; incrementa, apos testada, a linha atual
+    CMP  R0, 0         ; há tecla premida?
+    JZ   espera_tecla  ; se nenhuma tecla premida, repete
+                       ; vai mostrar a linha e a coluna da tecla
+    ROR  R1, 1         ; regressa à linha 
+    PUSH R1            ; guarda a linha atual na pilha
+    SHL  R1, 4         ; coloca linha no nibble high
+    OR   R1, R0        ; junta coluna (nibble low)
+    PUSH R1            ; guarda a linha e coluna na pilha
+
+    PUSH R10
+    MOV  R10, [VAR_STATUS]        ; guarda o ID da tecla premida em R8
+    CMP  R10, 0                   ; se o jogo não estiver iniciado
+    JZ testa_start
+
+testa_tecla:
+    POP R10
+    POP R1             ; retira da pilha a linha e coluna da tecla premida
+
+    MOV R8, TEC_C      ; coloca o ID da tecla C em R8
+    PUSH R0
+    MOV R0, VAR_MSONDA_ON ; coloca o endreço do estado da sonda do meio em R0
+    CMP R1, R8         
+    JZ  dispara_sonda
+
+    MOV R8, TEC_F      ; coloca o ID da tecla F em R8
+    CMP R1, R8         
+    JZ debug_asteroide
+
+    JMP ha_tecla       ; testa se a tecla permanece premida
+
+testa_start:
+    POP R10
+    POP R1             ; retira da pilha a linha e coluna da tecla premida
+
+    MOV R8, TEC_C      ; coloca o ID da tecla 0 em R8
+    CMP R1, R8
+    JZ  inicio_jogo
+
+    JMP ha_tecla       ; testa se a tecla permanece premida
+
+ha_tecla:              ; neste ciclo espera-se até NENHUMA tecla estar premida
+    YIELD              ; Ciclo bloqueante, cede o processador
+
+    POP R1             ; retira da pilha a linha atual
+    PUSH R1
+
+    MOVB [R2], R1      ; escrever no periférico de saída (linhas)
+    MOVB R0, [R3]      ; ler do periférico de entrada (colunas)
+
+    AND  R0, R5        ; elimina bits para além dos bits 0-3
+    CMP  R0, 0         ; há tecla premida?
+    JNZ  ha_tecla      ; se houver uma tecla premida, espera até não haver
+    POP R1             ; "limpa" da pilha a linha atual
+    JMP  tec_ciclo     ; se não houver, repete-se o ciclo de teste do teclado
+
+inicio_jogo:
+    MOV R1, [VAR_STATUS]     ; coloca a variável de estado do jogo em R1
+    MOV R1, 1                ; coloca o valor 1 em R1, para indicar que o jogo está iniciado
+    MOV [VAR_STATUS], R1     ; atualiza o valor da variável de estado do jogo
+    EI
+    JMP tec_ciclo            ; volta ao ciclo principal do teclado
+
+dispara_sonda:    ; Ativa a sonda na posição R0
+    PUSH R1
+    PUSH R2
+    MOV R1, [R0]  ; coloca o estado da sonda do meio em R1
+    MOV R2, 1     ; coloca o valor 1 em R2
+    OR R1, R2      ; liga a sonda do meio, mantem ligada
+
+    MOV [R0], R1  ; atualiza o estado da sonda do meio
+    POP R2  
+    POP R1
+    POP R0
+    JMP ha_tecla
+
+; *********************************************************************************
+; Processo - Nave
+; *********************************************************************************
+
+PROCESS SP_nave
+
+nave:
+
+    MOV R1, [VAR_STATUS]
+    CMP R1, 1
+    JZ aguarda_inicio_n              
+
+    EI
+    MOV R1, 0
+    MOV [SELECIONA_CENARIO], R1 ; seleciona o cenário 1 (Splash Screen)
+    
+    
+    CALL desenha_nave
+    
+    MOV  R4, DISPLAYS  ; endereço do periférico dos displays
+    MOV  R10, ENERGIA_BASE   ; inicializa a energia
+    MOV  [VAR_ENERGIA], R10  ; inicializa a energia
+    CALL hex_para_dec        ; converte o valor da energia para decimal
+    MOV  [R4], R10           ; inicializa o valor do display da energia
+
+    MOV  R4, DISPLAYS        ; endereço do periférico dos displays
+
+    MOV  [NAVE_LOCK], R10 ; bloqueia o update da nave
+aguarda_inicio_n:
+    YIELD
+    JMP nave
+
+atualiza_nave_loop:
+    YIELD
+    JMP atualiza_nave_loop
+
+
+
+; *********************************************************************************
+; Processo - Sondas
+; 
+;
+; *********************************************************************************
+PROCESS SP_sonda
+
+aguarda_inicio_s:
+    YIELD
+    JMP sonda
+sonda:
+    MOV R1, [VAR_STATUS]
+    CMP R1, 0
+    JZ aguarda_inicio_s
+
+m_sonda_check:
+    MOV R1, [VAR_MSONDA_ON]  ; coloca o estado da sonda do meio em R1
+    CMP R1, 1                ; se a sonda do meio estiver ligada
+    JZ m_sonda_on            ; salta para o código da sonda do meio ligada
+    JMP sonda                ; caso contrário, verifica a sonda da esquerda
+
+m_sonda_on:
+    MOV R1, [VAR_MSONDA_POS] ; coloca a posição vertical da sonda do meio em R1
+    MOV R2, SONDA_MAX        ; coloca a posição vertical máxima da sonda em R2
+    CMP R1, R2               ; se a sonda do meio estiver na posição mais alta
+    JZ m_sonda_off           ; salta para o código da sonda do meio desligada
+    CALL desenha_msonda      ; desenha a sonda do meio na posição atual
+    SUB R1, 1                ; decrementa a posição vertical da sonda do meio
+    MOV [VAR_MSONDA_POS], R1 ; atualiza a posição vertical da sonda do meio
+    MOV [SONDA_LOCK], R1     ; pára o update da sonda com um valor aleatório
+    JMP sonda                ; volta ao ciclo principal da sonda
+
+m_sonda_off:
+    MOV R1, [VAR_MSONDA_POS] ; coloca a posição vertical da sonda do meio em R1
+    MOV R2, 32               ; coloca a posição horizontal da sonda do meio em R2 (constante 32)
+    MOV R3, 0000H
+    CALL escreve_pixel       ; apaga o pixel na posição da sonda
+
+    MOV R1, MSONDA_BASE      ; coloca a posição vertical base da sonda do meio em R1
+    MOV [VAR_MSONDA_POS], R1 ; atualiza a posição vertical da sonda do meio
+    MOV [SONDA_LOCK], R1      ; bloqueia os updates da sonda 
+    JMP sonda                ; volta ao ciclo principal da sonda
+
+desenha_msonda: 
+    PUSH R0                 ; guarda o valor de R0
+    PUSH R1                 ; guarda o valor de R1
+    PUSH R2                 ; guarda o valor de R2
+    PUSH R3
+
+    MOV R1, [VAR_MSONDA_POS]; coloca a posição vertical da sonda do meio em R1
+    MOV R2, 32              ; coloca a posição horizontal da sonda do meio em R2 (constante 32)
+    MOV R3, [VAR_COR_SONDA] ; coloca a cor da sonda do meio em R3
+
+    CALL escreve_pixel      ; escreve o pixel na posição da sonda do meio
+    ADD R1, 1               ; coloca em R2 a posição da sonda a apagar 
+    MOV R3, 00000H          ; coloca em R3 a cor transparente
+    CALL escreve_pixel      ; apaga o pixel na posição anterior da sonda do meio
+    POP R3
+    POP R2
+    POP R1                  ; recupera o valor de R1
+    POP R0                  ; recupera o valor de R0
+    RET
+
+; *********************************************************************************
+
