@@ -179,9 +179,7 @@ DEF_NAVE:
     WORD 0, CINZ_ESC, CINZ_CLR, CINZ_ESC, CINZ_CLR, CINZENTO, CINZENTO, CINZENTO, CINZ_CLR, CINZ_ESC, CINZ_CLR, CINZ_ESC, 0         
     WORD 0, 0, CINZ_ESC, 0, 0, CINZ_CLR, CINZ_CLR, CINZ_CLR, 0, 0, CINZ_ESC, 0, 0                   
 
-SONDA_LOCK: LOCK 0 ; Contem o offset horizontal relativo ao meio do ecrã 
-            LOCK 0
-            LOCK 0  
+SONDA_LOCK:  LOCK 0
 NAVE_LOCK:   LOCK 0
 START_LOCK:  LOCK 0
 
@@ -683,8 +681,7 @@ sonda:
     EI1
     EI
 
-    MOV R1, [SONDA_LOCK]     ; pára o update da sonda lendo o lock
-
+   
     JMP m_sonda_check
 
 m_sonda_check:
@@ -692,6 +689,7 @@ m_sonda_check:
     MOV R1, [R0+R10]         ; coloca o estado da sonda  em R1
     CMP R1, 1                ; se a sonda do meio estiver ligada
     JZ m_sonda_on            ; salta para o código da sonda do meio ligada
+     YIELD
     JMP sonda                ; caso contrário, verifica de novo  (TEMP, DEVE VERIFICAR RESTANTES SONDAS)
 
 m_sonda_on:
@@ -705,6 +703,7 @@ m_sonda_on:
     CALL desenha_sonda       ; desenha a sonda do meio na posição atual
     SUB R1, 1                ; decrementa a posição vertical da sonda
     MOV [R0+R10], R1         ; atualiza a posição vertical da sonda 
+        MOV R1, [SONDA_LOCK]     ; pára o update da sonda lendo o lock
 
     JMP sonda                ; volta ao ciclo principal da sonda
 
@@ -722,6 +721,7 @@ m_sonda_off:
     MOV R1, SONDA_BASE      ; coloca a posição vertical base da sonda do meio em R1
     MOV R0, VAR_SONDA_POS   ; coloca o endreço da posição vertical da sonda em R0
     MOV [R0+R10], R1        ; atualiza a posição vertical da sonda do meio
+            MOV R1, [SONDA_LOCK]     ; pára o update da sonda lendo o lock
 
     JMP sonda               ; volta ao ciclo principal da sonda
 
@@ -733,10 +733,12 @@ desenha_sonda:
     MOV R0, VAR_SONDA_POS   ; coloca o endreço da posição vertical da sonda em R0
     MOV R1, [R0+R10]        ; coloca a posição vertical da sonda do meio em R1
     CALL sonda_offset       ; coloca em R2 a posição horizontal da sonda do meio
+
     MOV R3, [VAR_COR_SONDA] ; coloca a cor da sonda do meio em R3
 
     CALL escreve_pixel      ; escreve o pixel na posição da sonda do meio
-    ADD R1, 1               ; coloca em R2 a posição da sonda a apagar 
+    ADD R1, 1               ; aponta para a posição gráfica vertical da sonda a apagar
+    SUB R2, R11             ; coloca em R2 a posição da sonda a apagar
     MOV R3, 00000H          ; coloca em R3 a cor transparente
     CALL escreve_pixel      ; apaga o pixel na posição anterior da sonda do meio
     POP R3
@@ -753,7 +755,7 @@ sonda_offset:               ; COLOCA EM R2 A POSIÇÃO HORIZONTAL DA SONDA
     MUL R3, R11             ; multiplica a posição vertical da sonda do meio pelo offset da instância
     ADD R2, R3              ; coloca em R2 a posição horizontal da sonda do meio
     POP R3
-
+    RET
 aguarda_inicio_s:
     YIELD
     JMP sonda
