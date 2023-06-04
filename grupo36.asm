@@ -20,6 +20,7 @@ TEC_COL    EQU 0E000H  ; endereço das colunas do teclado (periférico PIN)
 LINHA_MAX  EQU 00010H  ; "teto" para a linha maxima a testar (4ª linha, 1000b)
 MASCARA    EQU 0FH     ; para isolar os 4 bits de menor peso, ao ler as colunas do teclado
 ENERGIA_BASE EQU 00064H   ; energia inicial
+TAMANHO_PILHA EQU 200H  ; tamanho da pilha
 
 TEC_0      EQU 00011H  ; tecla 0
 TEC_1      EQU 00012H  ; tecla 1
@@ -78,8 +79,12 @@ ROXO	     	EQU	0F60AH		; cor do pixel: preenchimento da nave em ARGB
 ; *********************************************************************************
 ; * Grandezas "físicas"
 ; *********************************************************************************
-MSONDA_BASE     EQU 21          ; posição vertical inicial da sonda do meio
-SONDA_MAX       EQU 8          ; Altura max da sonda
+SONDA_BASE     EQU 21          ; posição vertical inicial da sonda do meio
+SONDA_MAX       EQU 8           ; Altura max da sonda
+LSONDA_BASE     EQU 21          ; posição vertical inicial da sonda do meio
+RSONDA_BASE     EQU 21          ; posição vertical inicial da sonda do meio
+LSONDA_OFFSET   EQU -4          ; offset da sonda da esquerda
+RSONDA_OFFSET   EQU 4           ; offset da sonda da direita
 
 NAVE_X       EQU  26
 NAVE_Y       EQU  22
@@ -88,21 +93,21 @@ ALTURA_NAVE  EQU 10
 
 COLISAO_M_ASTEROIDE EQU 25       ; altura máxima que o asteroide central deve atingir
 COLISAO_L_ASTEROIDE EQU 25       ; altura máxima que os asteroides laterais devem atingir
-COLISAO_ASTEROIDE       EQU 32       ; altura máxima que os asteroides inocuos devem atingir
+COLISAO_ASTEROIDE   EQU 32       ; altura máxima que os asteroides inocuos devem atingir
 ; *********************************************************************************
 ; * Dados 
 ; *********************************************************************************
-	PLACE       2000H
+	PLACE       1000H
 
-	STACK 100H			; espaçco reservado para a pilha (200H bytes, ou 100H words)
+	STACK TAMANHO_PILHA 			; espaçco reservado para a pilha (200H bytes, ou 100H words)
 SP_inicial:				; Stack pointer do programa inicial
-    STACK 100H          ; espaço reservado para a pilha (200H bytes, ou 100H words)
+    STACK TAMANHO_PILHA          ; espaço reservado para a pilha (200H bytes, ou 100H words)
 SP_teclado:      ; Stack pointer do programa do teclado
-    STACK 100H          ; espaço reservado para a pilha (200H bytes, ou 100H words)
+    STACK TAMANHO_PILHA          ; espaço reservado para a pilha (200H bytes, ou 100H words)
 SP_nave:         ; Stack pointer do programa da nave
-    STACK 100H          ; espaço reservado para a pilha (200H bytes, ou 100H words)
+    STACK TAMANHO_PILHA * 3          ; espaço reservado para a pilha (200H bytes, ou 100H words)
 SP_sonda:        ; Stack pointer do programa da sonda
-    STACK 100H          ; espaço reservado para a pilha (200H bytes, ou 100H words)
+
 imagem_hexa:
 	BYTE	00H			; imagem em memória dos displays hexadecimais 
 						; (inicializada a zero, mas podia ser outro valor qualquer).
@@ -116,12 +121,13 @@ VAR_COR_PIXEL: WORD COR_PIXEL ; variável para guardar a cor do pixel, default �
 VAR_PROX_SOM:  WORD 0         ; variável para guardar o próximo som a tocar, default é 0
 
 VAR_COR_SONDA:  WORD 0FFC0H      ; variável para guardar a cor da sonda, default é amarelo
-VAR_MSONDA_POS: WORD MSONDA_BASE ; variável para guardar a posição da sonda do meio (default é NAVE_Y+1)
-VAR_LSONDA_POS: WORD NAVE_Y-1    ; variável para guardar a posição da sonda da esquerda (default é NAVE_Y+1)
-VAR_RSONDA_POS: WORD NAVE_Y-1    ; variável para guardar a posição da sonda da direita (default é NAVE_Y+1)
-VAR_MSONDA_ON:  WORD 0           ; variável para guardar o estado da sonda do meio (0 - desligada, 1 - ligada)
-VAR_LSONDA_ON:  WORD 0           ; variável para guardar o estado da sonda da esquerda (0 - desligada, 1 - ligada)
-VAR_RSONDA_ON:  WORD 0           ; variável para guardar o estado da sonda da direita (0 - desligada, 1 - ligada)
+VAR_SONDA_POS:  WORD SONDA_BASE  ; variável para guardar a posição da sonda da esquerda 
+                WORD SONDA_BASE  ; variável para guardar a posição da sonda do meio
+                WORD SONDA_BASE  ; variável para guardar a posição da sonda da direita
+
+VAR_SONDA_ON:   WORD 0           ; variável para guardar o estado da sonda do meio (0 - desligada, 1 - ligada)
+                WORD 0           ; variável para guardar o estado da sonda da esquerda (0 - desligada, 1 - ligada)
+                WORD 0           ; variável para guardar o estado da sonda da direita (0 - desligada, 1 - ligada)
 
 
 VAR_AST_POS_V_0: WORD 1   ; variável para guardar a posição vertical do asteroide 0
@@ -173,9 +179,11 @@ DEF_NAVE:
     WORD 0, CINZ_ESC, CINZ_CLR, CINZ_ESC, CINZ_CLR, CINZENTO, CINZENTO, CINZENTO, CINZ_CLR, CINZ_ESC, CINZ_CLR, CINZ_ESC, 0         
     WORD 0, 0, CINZ_ESC, 0, 0, CINZ_CLR, CINZ_CLR, CINZ_CLR, 0, 0, CINZ_ESC, 0, 0                   
 
-SONDA_LOCK: LOCK 0
-NAVE_LOCK:  LOCK 0
-START_LOCK: LOCK 0
+SONDA_LOCK: LOCK 0 ; Contem o offset horizontal relativo ao meio do ecrã 
+            LOCK 0
+            LOCK 0  
+NAVE_LOCK:   LOCK 0
+START_LOCK:  LOCK 0
 
 ; ******************************************************************************
 ; * Tabela de interrupções
@@ -208,8 +216,16 @@ inicio:		                  ; inicializações
 
     CALL teclado              ; inicia o processo do teclado
     CALL nave                 ; inicia o processo da nave
-    CALL sonda                ; inicia o processo das sondas
-    MOV  R1, [START_LOCK]      ; Bloqueia o processo principal
+
+	MOV	R11, -2		          ; número de sondas a criar é 3 (-1, 0, 1)
+loop_sondas:
+	ADD	R11, 1			      ; próxima sonda
+	CALL	init_sonda	      ; cria uma nova instância do processo sonda (o valor de R11 distingue-as)
+						      ; Cada processo fica com uma cópia independente dos registos, R11 serve como offset
+	CMP  R11, 1			      ; já criou as instâncias todas?
+    JNZ	loop_sondas	          ; se não, continua
+
+    MOV  R1, [START_LOCK]     ; Bloqueia o processo principal
 
 sum_display:                  ; TEMP!
 
@@ -517,7 +533,23 @@ testa_tecla:
 
     MOV R8, TEC_C      ; coloca o ID da tecla C em R8
     PUSH R0
-    MOV R0, VAR_MSONDA_ON ; coloca o endreço do estado da sonda do meio em R0
+    MOV R0, VAR_SONDA_ON ; coloca o endreço do estado da sonda do meio em R0
+    CMP R1, R8         
+    JZ  dispara_sonda
+    POP R0
+
+    MOV R8, TEC_D        ; coloca o ID da tecla D em R8
+    PUSH R0
+    MOV R0, VAR_SONDA_ON ; coloca o endreço do estado da sonda do meio em R0
+    ADD R0, 2
+    CMP R1, R8         
+    JZ  dispara_sonda
+    POP R0
+
+    MOV R8, TEC_E        ; coloca o ID da tecla E em R8
+    PUSH R0
+    MOV R0, VAR_SONDA_ON ; coloca o endreço do estado da sonda do meio em R0
+    ADD R0, 4            ; coloca o endreço do estado da sonda da direita em R0
     CMP R1, R8         
     JZ  dispara_sonda
     POP R0
@@ -635,6 +667,14 @@ atualiza_nave_loop:
 ; *********************************************************************************
 PROCESS SP_sonda
 
+init_sonda:
+	MOV	R1, TAMANHO_PILHA	; tamanho em palavras da pilha de cada processo
+    MOV R10, R11            ;
+    ADD R10, 1              ; R10 contem o offset para os endreços das variáveis da sonda
+    MUL	R1, R10			    ; TAMANHO_PILHA vezes o nº da instância da sonda
+	SUB	SP, R1		        ; inicializa SP desta sonda, relativo ao SP indicado inicalmente
+    SHL R10, 1              ; multiplica o offset da instância por 2, R10 é agora o offset em bytes
+
 sonda:
     
     MOV R1, [VAR_STATUS]
@@ -648,47 +688,51 @@ sonda:
     JMP m_sonda_check
 
 m_sonda_check:
-    MOV R1, [VAR_MSONDA_ON]  ; coloca o estado da sonda do meio em R1
+    MOV R0, VAR_SONDA_ON     ; coloca o endreço do estado da sonda em R0
+    MOV R1, [R0+R10]         ; coloca o estado da sonda  em R1
     CMP R1, 1                ; se a sonda do meio estiver ligada
     JZ m_sonda_on            ; salta para o código da sonda do meio ligada
     JMP sonda                ; caso contrário, verifica de novo  (TEMP, DEVE VERIFICAR RESTANTES SONDAS)
 
 m_sonda_on:
-    MOV R1, [VAR_MSONDA_POS] ; coloca a posição vertical da sonda do meio em R1
+    MOV R0, VAR_SONDA_POS    ; coloca o endreço da posição vertical da sonda em R0
+    MOV R1, [R0+R10]         ; coloca a posição vertical da sonda do meio em R1
 
     MOV R2, SONDA_MAX        ; coloca a posição vertical máxima da sonda em R2
     CMP R1, R2               ; se a sonda do meio estiver na posição mais alta
     JZ m_sonda_off           ; salta para o código da sonda do meio desligada
 
-    CALL desenha_msonda      ; desenha a sonda do meio na posição atual
-    SUB R1, 1                ; decrementa a posição vertical da sonda do meio
-    MOV [VAR_MSONDA_POS], R1 ; atualiza a posição vertical da sonda do meio
+    CALL desenha_sonda       ; desenha a sonda do meio na posição atual
+    SUB R1, 1                ; decrementa a posição vertical da sonda
+    MOV [R0+R10], R1         ; atualiza a posição vertical da sonda 
 
     JMP sonda                ; volta ao ciclo principal da sonda
 
 m_sonda_off:
-
-    MOV R1, [VAR_MSONDA_POS] ; coloca a posição vertical da sonda do meio em R1
+    MOV R0, VAR_SONDA_POS    ; coloca o endreço da posição vertical da sonda em R0
+    MOV R1, [R0+R10]         ; coloca a posição vertical da sonda do meio em R1
     ADD R1, 1                ; aponta para a posição gráfica da sonda do meio
-    MOV R2, 32               ; coloca a posição horizontal da sonda do meio em R2 (constante 32)
+    CALL sonda_offset
     MOV R3, 0000H
     CALL escreve_pixel       ; apaga o pixel na posição da sonda
 
-    MOV R1, 0                ;
-    MOV [VAR_MSONDA_ON], R1  ; desliga a sonda do meio
-    MOV R1, MSONDA_BASE      ; coloca a posição vertical base da sonda do meio em R1
-    MOV [VAR_MSONDA_POS], R1 ; atualiza a posição vertical da sonda do meio
+    MOV R1, 0            
+    MOV R0, VAR_SONDA_ON    ; coloca o endreço do estado da sonda em R0
+    MOV [R0+R10], R1        ; desliga a sonda do meio
+    MOV R1, SONDA_BASE      ; coloca a posição vertical base da sonda do meio em R1
+    MOV R0, VAR_SONDA_POS   ; coloca o endreço da posição vertical da sonda em R0
+    MOV [R0+R10], R1        ; atualiza a posição vertical da sonda do meio
 
-    JMP sonda                ; volta ao ciclo principal da sonda
+    JMP sonda               ; volta ao ciclo principal da sonda
 
-desenha_msonda: 
+desenha_sonda: 
     PUSH R0                 ; guarda o valor de R0
     PUSH R1                 ; guarda o valor de R1
     PUSH R2                 ; guarda o valor de R2
     PUSH R3
-
-    MOV R1, [VAR_MSONDA_POS]; coloca a posição vertical da sonda do meio em R1
-    MOV R2, 32              ; coloca a posição horizontal da sonda do meio em R2 (constante 32)
+    MOV R0, VAR_SONDA_POS   ; coloca o endreço da posição vertical da sonda em R0
+    MOV R1, [R0+R10]        ; coloca a posição vertical da sonda do meio em R1
+    CALL sonda_offset       ; coloca em R2 a posição horizontal da sonda do meio
     MOV R3, [VAR_COR_SONDA] ; coloca a cor da sonda do meio em R3
 
     CALL escreve_pixel      ; escreve o pixel na posição da sonda do meio
@@ -700,6 +744,15 @@ desenha_msonda:
     POP R1                  ; recupera o valor de R1
     POP R0                  ; recupera o valor de R0
     RET
+
+sonda_offset:               ; COLOCA EM R2 A POSIÇÃO HORIZONTAL DA SONDA
+    PUSH R3
+    MOV R2, 32              ; coloca a posição horizontal base da sonda do meio em R2 (constante 32)
+    MOV R3, SONDA_BASE      ;
+    SUB R3, R1              ;
+    MUL R3, R11             ; multiplica a posição vertical da sonda do meio pelo offset da instância
+    ADD R2, R3              ; coloca em R2 a posição horizontal da sonda do meio
+    POP R3
 
 aguarda_inicio_s:
     YIELD
