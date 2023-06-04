@@ -72,10 +72,14 @@ CINZENTO		EQU	0F888H		; cor do pixel: preenchimento da nave em ARGB
 CINZ_CLR		EQU	0F999H		; cor do pixel: preenchimento da nave em ARGB
 AZUL_CLR		EQU	0F79CH		; cor do pixel: preenchimento da nave em ARGB 
 AZUL_ESC		EQU	0F58AH		; cor do pixel: preenchimento da nave em ARGB
-ROXO	     	EQU	0F827H		; cor do pixel: preenchimento da nave em ARGB
+ROXO	     	EQU	0F60AH		; cor do pixel: preenchimento da nave em ARGB
 
-MSONDA_BASE     EQU 26 - 1      ; posição vertical base da sonda do meio
-SONDA_MAX       EQU 14          ; Altura max da sonda
+
+; *********************************************************************************
+; * Grandezas "físicas"
+; *********************************************************************************
+MSONDA_BASE     EQU 21          ; posição vertical inicial da sonda do meio
+SONDA_MAX       EQU 8          ; Altura max da sonda
 
 NAVE_X       EQU  26
 NAVE_Y       EQU  22
@@ -92,15 +96,13 @@ COLISAO_ASTEROIDE       EQU 32       ; altura máxima que os asteroides inocuos 
 
 	STACK 100H			; espaçco reservado para a pilha (200H bytes, ou 100H words)
 SP_inicial:				; Stack pointer do programa inicial
-
     STACK 100H          ; espaço reservado para a pilha (200H bytes, ou 100H words)
 SP_teclado:      ; Stack pointer do programa do teclado
-
     STACK 100H          ; espaço reservado para a pilha (200H bytes, ou 100H words)
 SP_nave:         ; Stack pointer do programa da nave
-
     STACK 100H          ; espaço reservado para a pilha (200H bytes, ou 100H words)
 SP_sonda:        ; Stack pointer do programa da sonda
+    STACK 100H          ; espaço reservado para a pilha (200H bytes, ou 100H words)
 imagem_hexa:
 	BYTE	00H			; imagem em memória dos displays hexadecimais 
 						; (inicializada a zero, mas podia ser outro valor qualquer).
@@ -172,38 +174,42 @@ DEF_NAVE:
     WORD 0, 0, CINZ_ESC, 0, 0, CINZ_CLR, CINZ_CLR, CINZ_CLR, 0, 0, CINZ_ESC, 0, 0                   
 
 SONDA_LOCK: LOCK 0
-NAVE_LOCK: LOCK 0
+NAVE_LOCK:  LOCK 0
+START_LOCK: LOCK 0
 
 ; ******************************************************************************
 ; * Tabela de interrupções
 ; ******************************************************************************
 
-tab: 
-    WORD 0
-    WORD rot_int_1
-    WORD 0
-    WORD 0
+tab: WORD 0
+     WORD int_sonda
+     WORD 0
+     WORD 0
 
 ; ******************************************************************************
 ; * Código
 ; ******************************************************************************
 
     PLACE       0
-inicio:		
-; inicializações
-    MOV  SP, SP_inicial; inicializa Stack Pointer
+
+inicio:		                  ; inicializações
+    MOV  SP, SP_inicial       ; inicializa Stack Pointer
     
-    MOV BTE, tab      ; coloca o endereço da tabela de interrupções em BTE
+    MOV BTE, tab              ; coloca o endereço da tabela de interrupções em BTE
 
     MOV R1, 1                
-    MOV  [APAGA_AVISO], R1	; apaga o aviso de nenhum cenário selecionado (o valor de R1 não é relevante)
-    MOV  [APAGA_ECRÃ], R1	; apaga todos os pixels já desenhados (o valor de R1 não é relevante)
+    MOV  [APAGA_AVISO], R1	  ; apaga o aviso de nenhum cenário selecionado (o valor de R1 não é relevante)
+    MOV  [APAGA_ECRÃ], R1	  ; apaga todos os pixels já desenhados (o valor de R1 não é relevante)
     MOV  [SELECIONA_CENARIO], R1 ; seleciona o cenário 1 (Splash Screen)
+    
+    MOV  R1, 0
+    MOV  R4, DISPLAYS         ; endereço do periférico dos displays
+    MOV  [R4], R1             ; inicializa o valor do display da energia
 
-    CALL teclado            ; inicia o processo do teclado
-    CALL nave               ; inicia o processo da nave
-    CALL sonda             ; inicia o processo das sondas
-
+    CALL teclado              ; inicia o processo do teclado
+    CALL nave                 ; inicia o processo da nave
+    CALL sonda                ; inicia o processo das sondas
+    MOV  R1, [START_LOCK]      ; Bloqueia o processo principal
 
 sum_display:                  ; TEMP!
 
@@ -308,7 +314,7 @@ desenha_asteroide:
 
 
 ; **********************************************************************
-; DESENHA_BONECO - Desenha um sprite a partir do canto superior 
+; DESENHA_SPRITE - Desenha um sprite a partir do canto superior 
 ;                  esquerdo dado, como definido na tabela indicada.
 ;                   
 ; Argumentos:   R10 - linha
@@ -388,19 +394,21 @@ escreve_pixel:
     RET
 
 ; **********************************************************************
-; TOCA_SOM - Toca um som a partir do endereço indicado numa variável.
+; TOCA_SOM - Toca um som especificado em R0.
 ; **********************************************************************
 toca_som:
-    PUSH R0
-    MOV R0, [VAR_PROX_SOM]   ; coloca o próximo som a tocar em R0
+
     MOV [SELECIONA_VID], R0  ; seleciona o som
     MOV [PLAY_VID], R0       ; toca o som
-    POP R0
+
     RET
 
-rot_int_1: 
+int_sonda:
+    PUSH R0
+    MOV R0, 0
     MOV [SONDA_LOCK], R0      ; desbloqueia o processo da sonda
-
+    POP R0
+    RFE 
 
 ; *********************************************************************************
 ; Ações do teclado
@@ -429,7 +437,6 @@ atualiza_asteroide:           ; TEMP - assume R0, R1 e R2 como os endreços das 
     PUSH R5
     PUSH R0
     MOV R0, 1
-    MOV [VAR_PROX_SOM], R0    ; coloca o numero do som (1), whilhelm.wav
     CALL toca_som             ; toca o som
     POP R0
 
@@ -477,11 +484,12 @@ teclado:
     MOV  R7, LINHA_MAX ; "teto" para linha maxima a testar (4ª linha, 1000b) 
 
 tec_ciclo:
+    YIELD              ; Ciclo potencialmente bloqueante, cede o processador
+
     MOV  R1, 1         ; para guardar o valor da linha a ser testada
     MOV  R8, 0         ; registo de ID de teclas
 
 espera_tecla:          ; neste ciclo espera-se até uma tecla ser premida
-    YIELD              ; Ciclo potencialmente bloqueante, cede o processador
 
     MOVB [R2], R1      ; escrever no periférico de saída (linhas)
     MOVB R0, [R3]      ; ler do periférico de entrada (colunas)
@@ -512,6 +520,7 @@ testa_tecla:
     MOV R0, VAR_MSONDA_ON ; coloca o endreço do estado da sonda do meio em R0
     CMP R1, R8         
     JZ  dispara_sonda
+    POP R0
 
     MOV R8, TEC_F      ; coloca o ID da tecla F em R8
     CMP R1, R8         
@@ -548,17 +557,36 @@ inicio_jogo:
     MOV R1, [VAR_STATUS]     ; coloca a variável de estado do jogo em R1
     MOV R1, 1                ; coloca o valor 1 em R1, para indicar que o jogo está iniciado
     MOV [VAR_STATUS], R1     ; atualiza o valor da variável de estado do jogo
+    EI1
     EI
     JMP tec_ciclo            ; volta ao ciclo principal do teclado
 
 dispara_sonda:    ; Ativa a sonda na posição R0
     PUSH R1
     PUSH R2
+
     MOV R1, [R0]  ; coloca o estado da sonda do meio em R1
+    PUSH R1
+
     MOV R2, 1     ; coloca o valor 1 em R2
     OR R1, R2      ; liga a sonda do meio, mantem ligada
-
     MOV [R0], R1  ; atualiza o estado da sonda do meio
+
+    POP R2
+    CMP R1, R2     ; se a sonda do meio acaba de ligar
+    JNZ som_disparo; salta para o código do som de disparo
+    JMP som_cooldown;
+
+som_disparo:
+    MOV R0, 0    ; coloca o valor 1 em R0
+    CALL toca_som ; toca o som da sonda
+    JMP fim_disparo
+
+som_cooldown:
+    MOV R0, 2    ; coloca o valor 2 em R0
+    CALL toca_som ; toca o som de cooldown da sonda
+
+fim_disparo:
     POP R2  
     POP R1
     POP R0
@@ -573,7 +601,7 @@ PROCESS SP_nave
 nave:
 
     MOV R1, [VAR_STATUS]
-    CMP R1, 1
+    CMP R1, 0
     JZ aguarda_inicio_n              
 
     EI
@@ -591,7 +619,7 @@ nave:
 
     MOV  R4, DISPLAYS        ; endereço do periférico dos displays
 
-    MOV  [NAVE_LOCK], R10 ; bloqueia o update da nave
+    MOV  R10, [NAVE_LOCK] ; bloqueia o update da nave
 aguarda_inicio_n:
     YIELD
     JMP nave
@@ -600,8 +628,6 @@ atualiza_nave_loop:
     YIELD
     JMP atualiza_nave_loop
 
-
-
 ; *********************************************************************************
 ; Processo - Sondas
 ; 
@@ -609,40 +635,50 @@ atualiza_nave_loop:
 ; *********************************************************************************
 PROCESS SP_sonda
 
-aguarda_inicio_s:
-    YIELD
-    JMP sonda
 sonda:
+    
     MOV R1, [VAR_STATUS]
     CMP R1, 0
     JZ aguarda_inicio_s
+    EI1
+    EI
+
+    MOV R1, [SONDA_LOCK]     ; pára o update da sonda lendo o lock
+
+    JMP m_sonda_check
 
 m_sonda_check:
     MOV R1, [VAR_MSONDA_ON]  ; coloca o estado da sonda do meio em R1
     CMP R1, 1                ; se a sonda do meio estiver ligada
     JZ m_sonda_on            ; salta para o código da sonda do meio ligada
-    JMP sonda                ; caso contrário, verifica a sonda da esquerda
+    JMP sonda                ; caso contrário, verifica de novo  (TEMP, DEVE VERIFICAR RESTANTES SONDAS)
 
 m_sonda_on:
     MOV R1, [VAR_MSONDA_POS] ; coloca a posição vertical da sonda do meio em R1
+
     MOV R2, SONDA_MAX        ; coloca a posição vertical máxima da sonda em R2
     CMP R1, R2               ; se a sonda do meio estiver na posição mais alta
     JZ m_sonda_off           ; salta para o código da sonda do meio desligada
+
     CALL desenha_msonda      ; desenha a sonda do meio na posição atual
     SUB R1, 1                ; decrementa a posição vertical da sonda do meio
     MOV [VAR_MSONDA_POS], R1 ; atualiza a posição vertical da sonda do meio
-    MOV [SONDA_LOCK], R1     ; pára o update da sonda com um valor aleatório
+
     JMP sonda                ; volta ao ciclo principal da sonda
 
 m_sonda_off:
+
     MOV R1, [VAR_MSONDA_POS] ; coloca a posição vertical da sonda do meio em R1
+    ADD R1, 1                ; aponta para a posição gráfica da sonda do meio
     MOV R2, 32               ; coloca a posição horizontal da sonda do meio em R2 (constante 32)
     MOV R3, 0000H
     CALL escreve_pixel       ; apaga o pixel na posição da sonda
 
+    MOV R1, 0                ;
+    MOV [VAR_MSONDA_ON], R1  ; desliga a sonda do meio
     MOV R1, MSONDA_BASE      ; coloca a posição vertical base da sonda do meio em R1
     MOV [VAR_MSONDA_POS], R1 ; atualiza a posição vertical da sonda do meio
-    MOV [SONDA_LOCK], R1      ; bloqueia os updates da sonda 
+
     JMP sonda                ; volta ao ciclo principal da sonda
 
 desenha_msonda: 
@@ -665,5 +701,8 @@ desenha_msonda:
     POP R0                  ; recupera o valor de R0
     RET
 
+aguarda_inicio_s:
+    YIELD
+    JMP sonda
 ; *********************************************************************************
 
