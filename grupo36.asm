@@ -92,15 +92,14 @@ NAVE_Y       EQU  22
 LARGURA_NAVE EQU 13
 ALTURA_NAVE  EQU 10
 
-COLISAO_M_ASTEROIDE EQU 25       ; altura máxima que o asteroide central deve atingir
-COLISAO_L_ASTEROIDE EQU 25       ; altura máxima que os asteroides laterais devem atingir
-COLISAO_ASTEROIDE   EQU 32       ; altura máxima que os asteroides inocuos devem atingir
+COLISAO_MID_ASTEROIDE   EQU 20       ; altura máxima que os asteroides nao inocuos devem atingir
+COLISAO_ASTEROIDE       EQU 24      ; altura maxima que os asteroides devem atingir
 LIM_ASTEROIDE       EQU 29        ; altura maxima que os asteroides devem atingir
 
 V_BASE_AST EQU 3
 H_BASE_AST_1 EQU 3
 H_BASE_AST_3 EQU 32
-H_BASE_AST_5 EQU 60 
+H_BASE_AST_5 EQU 61 
 
 ; *********************************************************************************
 ; * Dados 
@@ -140,10 +139,18 @@ VAR_SONDA_ON:   WORD 0           ; variável para guardar o estado da sonda do m
                 WORD 0           ; variável para guardar o estado da sonda da direita (0 - desligada, 1 - ligada)
 
 VAR_AST_ON:     WORD 0  
-                WORD 1  
+                WORD 0  
                 WORD 0
-                WORD 1
                 WORD 0
+                WORD 0
+
+VAR_AST_TIPO:   WORD 0
+                WORD 0
+                WORD 0
+                WORD 0
+                WORD 0
+
+VAR_AST_NUM:  WORD 0  
 
 VAR_AST_POS_V:  WORD V_BASE_AST   ; variável para guardar a posição vertical do asteroide 0
                 WORD V_BASE_AST   ; variável para guardar a posição vertical do asteroide 1
@@ -169,6 +176,15 @@ DEF_ASTEROIDE:					; tabela que define o asteroide (cor, largura, pixels)
 	WORD		CAST_ESC, CAST_CLR, CAST_CLR, CAST_CLR, CAST_ESC	;
     WORD		CAST_ESC, CAST_CLR, CAST_CLR, CAST_CLR, CAST_ESC	;
     WORD		CAST_ESC, CAST_CLR, CAST_CLR, CAST_CLR, CAST_ESC    ;
+    WORD		       0, CAST_ESC, CAST_ESC, CAST_ESC, 0		    ;
+
+DEF_AST_NRG:					; tabela que define o asteroide (cor, largura, pixels)
+	WORD		LARGURA_AST     ; [DEF_AST + 0] largura do asteroide 1228
+    WORD        LARGURA_AST     ; [DEF_AST + 2] altura do asteroide, igual a largura 122A
+    WORD		       0, CAST_ESC, CAST_ESC, CAST_ESC, 0		    ; [DEF_AST + 4 + 2*col + 2*col*lin] 
+	WORD		CAST_ESC, ROXO, CAST_CLR, ROXO, CAST_ESC	;
+    WORD		CAST_ESC, CAST_CLR, ROXO, CAST_CLR, CAST_ESC	;
+    WORD		CAST_ESC, ROXO, CAST_CLR, ROXO, CAST_ESC    ;
     WORD		       0, CAST_ESC, CAST_ESC, CAST_ESC, 0		    ;
 
 DEF_CLEAR_AST:				; tabela que define o asteroide (cor, largura, pixels)
@@ -750,6 +766,7 @@ init_asteroides:
     MOV R3, VAR_AST_ON      ; coloca o endereço do estado do asteroide em R3
     MOV R7, [R1+R10]        ; coloca a posição vertical ORIGINAL do asteroide em R7
     MOV R8, [R2+R10]        ; coloca a posição horizontal ORIGINAL do asteroide em R8
+    MOV R9, COLISAO_ASTEROIDE; coloca o limite da colisão em r9
 
 calc_offset_a:              ; calcula o offset horizontal a aplicar por ciclo com base na instância, GUARDA EM R0
     CMP R11, 5              ; se a instância for 5
@@ -765,7 +782,7 @@ calc_offset_a:              ; calcula o offset horizontal a aplicar por ciclo co
 
 
 inocuo:
-    MOV R9, LIM_ASTEROIDE               ; coloca o offset horizontal do asteroide do meio em R0
+    MOV R9, LIM_ASTEROIDE               ; coloca o limite da colisão do asteroide do meio em R9
     JMP asteroides          ; salta para o código que move o asteroide
 
 asteroide_esq:              ; asteroides que se movem para a esquerda
@@ -781,6 +798,7 @@ asteroide_dir:              ; asteroides que se movem para a direita
     JMP asteroides          ; salta para o código que move o asteroide
     
 asteroide_meio:
+    MOV R9, COLISAO_MID_ASTEROIDE              ; coloca o limite da colisão do asteroide do meio em R9
     MOV R0, 0               ; coloca o offset horizontal do asteroide do meio em R0
     JMP asteroides          ; salta para o código que move o asteroide
 
@@ -795,15 +813,14 @@ asteroides:
     JMP asteroide_check
 
 asteroide_check:
-    ;MOV R5, [AST_LOCK]    
+    YIELD  
     MOV R4, [R3+R10]        ; coloca o estado do asteroide em R1
     CMP R4, 1               ; se o asteroide estiver ligado
-    JZ asteroide_on        ; salta para o código que move o asteroide
-
-    JMP asteroide_spawn      ; salta para o código que desliga o asteroide
+    JZ asteroide_on         ; salta para o código que move o asteroide
+    JMP asteroide_spawn     ; salta para o código que verifica o spawn do asteroide
 
 asteroide_on:
-    YIELD                   ; TEMP!!!!
+
     PUSH R10                ; guarda o valor de R10
     PUSH R11                ; guarda o valor de R11
 
@@ -818,7 +835,8 @@ asteroide_on:
     MOV R10, R4             ; coloca a posição vertical do asteroide em R10
     PUSH R4                 ; guarda o valor de R4
 
-    MOV R4, DEF_CLEAR_AST   
+
+    MOV R4, DEF_CLEAR_AST
     SUB R11, R0             ; Subs servem para apagar o asteroide na posição anterior
     SUB R10, 1
     CALL desenha_asteroide
@@ -826,6 +844,7 @@ asteroide_on:
     ADD R11, R0
     ADD R10, 1
     MOV R4, DEF_ASTEROIDE   ; coloca o endereço do desenho do asteroide em R4
+    ADD R4, R6
     CALL desenha_asteroide  ; desenha o asteroide
     
     POP R4                  ; recupera o valor de R4 para verificar a pos. vertical
@@ -839,27 +858,79 @@ asteroide_on:
     JMP asteroide_check     ; volta a verificar o estado do asteroide
 
 asteroide_reset:
+
     MOV R5, LIM_ASTEROIDE
     CMP R9, R5              ; se o limite for o limite para asteróides inócuos, desligar o asteroide
-    JZ asteroide_off        ; salta para o código que desliga o asteroide
-    JMP asteroide_fim       ; salta para o código que acaba o jogo por colisão
+    JZ  asteroide_off       ; salta para o código que desliga o asteroide
+    
+    MOV R6, R10             ; BODGED!!!!
+    POP R10                 ; recupera o valor de R11 para R10 (OFFSET DE MEMÓRIA)
+    PUSH R6                 ; guarda o valor de R10 antigo (POSIÇÃO)
+    SUB R10, 1              ; decrementa o offset de memória
+    SHL R10, 1              ; multiplica o offset de memória por 2
 
-asteroide_spawn:            ; TEMP!!!!
-    YIELD   
-    JMP asteroide_check     ; volta a verificar o estado do asteroide
+    MOV R5, VAR_AST_ON
+    MOV R5, [R5+R10];
+    CMP R5, 0               ;
+    JZ  asteroide_off       ; salta para o código que desliga o asteroide
+    ;JMP asteroide_fim      ; salta para o código que acaba o jogo por colisão
+    ;R10 e R11 possívelmente trocados neste ponto. Irrelevante,no fim de jogo o erro não é visível
+    JMP asteroide_off       ; salta para o código que desliga o asteroide
+
+asteroide_spawn:            
+    MOV R4, [VAR_AST_NUM]   ; coloca o número de asteroides ativos em R4
+    CMP R4, 4               ; se o número de asteroides ativos for 3
+    JZ asteroide_check      ; Volta para o início do ciclo
+    PUSH R0                 ; guarda o valor de R0
+    CALL numero_aleatorio   ; coloca um número aleatório entre 0 e 15 em R0
+    MOV R6, R0              ; coloca o número aleatório em R6
+    POP R0
+
+    SHR R6, 3               ; Isola o ultimo bit do número aleatório (0 ou 1)
+    JZ  asteroide_check     ; 50% de chance de spawnar um asteroide POR PROCESSO,
+    MOV R5, 1
+    MOV [R3+R10], R5        ; atualiza o estado do asteroide
+    MOV R6, [VAR_AST_NUM]
+    ADD R6, R5              ; incrementa o número de asteroides ativos
+    MOV [VAR_AST_NUM], R6   ; atualiza o número de asteroides ativos
+
+    PUSH R0                 ; guarda o valor de R0
+    CALL numero_aleatorio   ; coloca um número aleatório entre 0 e 15 em R0
+    MOV R5, VAR_AST_TIPO
+    SHR R0, 2               ; Isola os ultimos 2 bits do número aleatório (0 a 3)
+    JNZ  fim_spawn          ; 25% de chance de spawnar um asteroide minerável
+    MOV R6, 1
+    MOV [R5+R10], R6         ; atualiza o tipo do asteroide
+
+fim_spawn:
+    MOV R6, [R5+R10]
+    MOV R5, 2
+    MUL R6, R5              ; multiplica o tipo do asteroide por 2
+    MOV R5, 27
+    MUL R6, R5             ; Numero de words no asteroide, contingente no mineravel estar definido seguidamente
+    POP R0   
+    JMP asteroide_on        ; começa a mover o asteroide
+
 
 asteroide_off:              ; desliga o asteroide
     MOV R4, DEF_CLEAR_AST  
     CALL desenha_asteroide  ; apaga o asteroide
-    
-    POP R11                 ; recupera o valor de R11
-    POP R10                 ; recupera o valor de R10
-    
+    POP R11
+    POP R10
     MOV R4, 0               ; coloca o estado do asteroide em R4
     MOV [R3+R10], R4        ; atualiza o estado do asteroide
     MOV [R1+R10], R7        ; Reinicia a posição vertical do asteroide
     MOV [R2+R10], R8        ; Reinicia a posição horizontal do asteroide
-    JMP asteroide_check    ; volta a verificar o estado do asteroide
+    MOV R5, 1
+    MOV R6, [VAR_AST_NUM]
+    SUB R6, R5              ; incrementa o número de asteroides ativos
+    MOV [VAR_AST_NUM], R6   ; atualiza o número de asteroides ativos
+
+    MOV R5, VAR_AST_TIPO
+    MOV R6, 0
+    MOV [R5+R10], R6         ; atualiza o tipo do asteroide
+
+    JMP asteroide_check     ; volta a verificar o estado do asteroide
 
 asteroide_fim:              ; NOT FUCKING WORKING
     POP R11                 ; recupera o valor de R11
@@ -871,3 +942,15 @@ aguarda_inicio_a:
     YIELD
     JMP asteroides
 
+; *********************************************************************************
+; Gerador Pseudo-Aleatório - Faz uso dos bits "no ar" do periférico PIN para
+;                            obter um valor de 4 bits aleatório entre 0 e 15
+;                            OUTPUT - R0
+; *********************************************************************************
+numero_aleatorio:            
+    PUSH R1
+    MOV  R1, TEC_COL           ; Periférico PIN liga bits 0 a 3 ao teclado, restantes bits no ar
+    MOV  R0, [R1]
+    SHR  R0, 12                ; R0 possui um valor entre 0 e 15
+    POP  R1
+    RET
