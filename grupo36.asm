@@ -527,19 +527,11 @@ espera_tecla:          ; neste ciclo espera-se até uma tecla ser premida
 
 testa_tecla:
     POP R10
-    POP R1             ; retira da pilha a linha e coluna da tecla premida
-
-    MOV R8, TEC_C      ; coloca o ID da tecla C em R8
-    PUSH R0
-    MOV R0, VAR_SONDA_ON ; coloca o endreço do estado da sonda do meio em R0
-    CMP R1, R8         
-    JZ  dispara_sonda
-    POP R0
+    POP R1               ; retira da pilha a linha e coluna da tecla premida
 
     MOV R8, TEC_D        ; coloca o ID da tecla D em R8
     PUSH R0
     MOV R0, VAR_SONDA_ON ; coloca o endreço do estado da sonda do meio em R0
-    ADD R0, 2
     CMP R1, R8         
     JZ  dispara_sonda
     POP R0
@@ -547,12 +539,20 @@ testa_tecla:
     MOV R8, TEC_E        ; coloca o ID da tecla E em R8
     PUSH R0
     MOV R0, VAR_SONDA_ON ; coloca o endreço do estado da sonda do meio em R0
+    ADD R0, 2
+    CMP R1, R8         
+    JZ  dispara_sonda
+    POP R0
+
+    MOV R8, TEC_F        ; coloca o ID da tecla E em R8
+    PUSH R0
+    MOV R0, VAR_SONDA_ON ; coloca o endreço do estado da sonda do meio em R0
     ADD R0, 4            ; coloca o endreço do estado da sonda da direita em R0
     CMP R1, R8         
     JZ  dispara_sonda
     POP R0
 
-    MOV R8, TEC_F      ; coloca o ID da tecla F em R8
+    MOV R8, TEC_8      ; coloca o ID da tecla F em R8
     CMP R1, R8         
     JZ debug_asteroide
 
