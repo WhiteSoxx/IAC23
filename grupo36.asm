@@ -456,50 +456,6 @@ int_ast:
     MOV [AST_LOCK], R0        ; desbloqueia o processo da sonda
     POP R0
     RFE 
-; *********************************************************************************
-; Ações do teclado
-; *********************************************************************************
-
-atualiza_asteroide:           ; TEMP - assume R0, R1 e R2 como os endreços das coordenadas e a direcção do asteroide
-    PUSH R10
-    PUSH R11
-    PUSH R4
-
-    PUSH R5
-    PUSH R0
-    MOV R0, 1
-    CALL toca_som             ; toca o som
-    POP R0
-
-    MOV R10, [R0]             ; coloca a posição vertical do asteroide em R10
-    MOV R11, [R1]             ; coloca a posição horizontal do asteroide em R11
-    MOV R4, DEF_CLEAR_AST     ; coloca o endereço da tabela do asteroide em R4
-    CALL desenha_asteroide    ; apaga o asteroide na posição atual
-    ADD R10, 1                ; incrementa a posição vertical do asteroide
-    ADD R11, R2               ; incrementa a posição horizontal do asteroide
-    MOV R4, DEF_ASTEROIDE     ; coloca o endereço da tabela do asteroide em R4
-    MOV R5, COLISAO_ASTEROIDE ; coloca a altura máxima que o asteroide deve atingir em R5
-    CMP R11, R5               ; se o asteroide já estiver no fundo
-    JZ reset_asteroide
-    CALL desenha_asteroide    ; caso contrário, desenha o asteroide na nova posição
-    MOV [R0], R10             ; atualiza a posição vertical do asteroide
-    MOV [R1], R11             ; atualiza a posição horizontal do asteroide
-    POP R5
-    POP R4
-    POP R11
-    POP R10
-    RET
-
-reset_asteroide:              ; TEMP!! Assume ainda o asteroide 0 - De futuro, definir variáveis é necessário
-    MOV R10, 1                ; coloca a posição vertical default do asteroide em R10
-    MOV R11, 1                ; coloca a posição horizontal default do asteroide em R11
-    MOV [R0], R10             ; coloca a posição vertical do asteroide em R1
-    MOV [R1], R11             ; coloca a posição horizontal do asteroide em R2
-    POP R5
-    POP R4
-    POP R11
-    POP R10
-    RET
 
 ; *********************************************************************************
 ; Processo
