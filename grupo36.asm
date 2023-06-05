@@ -86,6 +86,7 @@ LSONDA_OFFSET   EQU -4          ; offset da sonda da esquerda
 RSONDA_OFFSET   EQU 4           ; offset da sonda da direita
 
 ENERGIA_BASE EQU 00064H   ; energia inicial
+DEC_ENERGIA  EQU 00003H ; decremento da energia por sonda lançada
 
 NAVE_X       EQU  26
 NAVE_Y       EQU  22
@@ -283,10 +284,8 @@ sum_display:                  ; TEMP!
 ; **********************************************************************
 ; HEX_PARA_DEC - Converte um valor hexadecimal para um valor pseudo-
 ;                -decimal para apresentar nos displays de 7 segmentos
-; Argumentos:   R1 - linha
-;               R2 - coluna
-;               R4 - tabela que define o boneco
-;
+; Argumentos:   R10 - Valor a converter
+; Retorna:      R10 - Valor convertido
 ; **********************************************************************
 hex_para_dec:
     PUSH R0
@@ -589,8 +588,12 @@ dispara_sonda:    ; Ativa a sonda na posição R0
 
     POP R2
     CMP R1, R2     ; se a sonda do meio acaba de ligar
-    JNZ som_disparo; salta para o código do som de disparo
-    JMP som_cooldown;
+    JZ som_cooldown; salta para o código do som de disparo
+    PUSH R10
+    MOV R10, DEC_ENERGIA
+    CALL atualiza_energia
+    POP R10
+    JNZ som_disparo;
 
 som_disparo:
     MOV R0, 0    ; coloca o valor 1 em R0
@@ -606,6 +609,22 @@ fim_disparo:
     POP R1
     POP R0
     JMP ha_tecla
+
+atualiza_energia:
+    PUSH R1
+    PUSH R4
+    MOV R1, [VAR_ENERGIA] ; coloca o valor da energia em R1
+    CMP R1, 0             ; se a energia for 0
+    ;JZ fim_jogo          ; salta para o código do fim do jogo
+    SUB R1, R10           ; decrementa a energia no valor dado por R10
+    MOV [VAR_ENERGIA], R1 ; atualiza o valor da energia
+    MOV R10, R1           ; Passa o valor da energia para R10
+    CALL hex_para_dec     ; converte o valor da energia para decimal
+    MOV R4, DISPLAYS      ; endereço do periférico dos displays
+    MOV [R4], R10         ; atualiza o valor do display da energia
+    POP R4
+    POP R1
+    RET
 
 ; *********************************************************************************
 ; Processo - Nave
@@ -665,8 +684,6 @@ sonda:
     JZ aguarda_inicio_s
     EI1
     EI
-
-   
     JMP m_sonda_check
 
 m_sonda_check:
@@ -813,7 +830,6 @@ asteroides:
     JMP asteroide_check
 
 asteroide_check:
-    YIELD  
     MOV R4, [R3+R10]        ; coloca o estado do asteroide em R1
     CMP R4, 1               ; se o asteroide estiver ligado
     JZ asteroide_on         ; salta para o código que move o asteroide
@@ -854,10 +870,12 @@ asteroide_on:
 
     POP R11                 ; recupera o valor de R11
     POP R10                 ; recupera o valor de R10
+        MOV R5, [AST_LOCK]      ; Bloqueia o processo dos asteroides
 
     JMP asteroide_check     ; volta a verificar o estado do asteroide
 
 asteroide_reset:
+        MOV R5, [AST_LOCK]      ; Bloqueia o processo dos asteroides
 
     MOV R5, LIM_ASTEROIDE
     CMP R9, R5              ; se o limite for o limite para asteróides inócuos, desligar o asteroide
@@ -877,7 +895,8 @@ asteroide_reset:
     ;R10 e R11 possívelmente trocados neste ponto. Irrelevante,no fim de jogo o erro não é visível
     JMP asteroide_off       ; salta para o código que desliga o asteroide
 
-asteroide_spawn:            
+asteroide_spawn:  
+    YIELD    
     MOV R4, [VAR_AST_NUM]   ; coloca o número de asteroides ativos em R4
     CMP R4, 4               ; se o número de asteroides ativos for 3
     JZ asteroide_check      ; Volta para o início do ciclo
