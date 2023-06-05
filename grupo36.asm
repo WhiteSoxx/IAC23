@@ -94,6 +94,7 @@ ALTURA_NAVE  EQU 10
 COLISAO_M_ASTEROIDE EQU 25       ; altura máxima que o asteroide central deve atingir
 COLISAO_L_ASTEROIDE EQU 25       ; altura máxima que os asteroides laterais devem atingir
 COLISAO_ASTEROIDE   EQU 32       ; altura máxima que os asteroides inocuos devem atingir
+LIM_ASTEROIDE       EQU 30        ; altura maxima que os asteroides devem atingir
 ; *********************************************************************************
 ; * Dados 
 ; *********************************************************************************
@@ -107,6 +108,8 @@ SP_teclado:      ; Stack pointer do programa do teclado
 SP_nave:         ; Stack pointer do programa da nave
     STACK TAMANHO_PILHA * 3          ; espaço reservado para a pilha (200H bytes, ou 100H words)
 SP_sonda:        ; Stack pointer do programa da sonda
+    STACK TAMANHO_PILHA * 5          ; espaço reservado para a pilha (200H bytes, ou 100H words)
+SP_asteroides:   ; Stack pointer do programa dos asteroides
 
 imagem_hexa:
 	BYTE	00H			; imagem em memória dos displays hexadecimais 
@@ -129,18 +132,29 @@ VAR_SONDA_ON:   WORD 0           ; variável para guardar o estado da sonda do m
                 WORD 0           ; variável para guardar o estado da sonda da esquerda (0 - desligada, 1 - ligada)
                 WORD 0           ; variável para guardar o estado da sonda da direita (0 - desligada, 1 - ligada)
 
+VAR_AST_ON:     WORD 0
+                WORD 0
+                WORD 0
+                WORD 0
+                WORD 0
 
-VAR_AST_POS_V_0: WORD 1   ; variável para guardar a posição vertical do asteroide 0
-VAR_AST_POS_V_1: WORD 2   ; variável para guardar a posição vertical do asteroide 1
-VAR_AST_POS_V_2: WORD 2   ; variável para guardar a posição vertical do asteroide 2
-VAR_AST_POS_V_3: WORD 2   ; variável para guardar a posição vertical do asteroide 3
-VAR_AST_POS_V_4: WORD 2   ; variável para guardar a posição vertical do asteroide 4
+VAR_AST_POS_V:  WORD 1   ; variável para guardar a posição vertical do asteroide 0
+                WORD 2   ; variável para guardar a posição vertical do asteroide 1
+                WORD 2   ; variável para guardar a posição vertical do asteroide 2
+                WORD 2   ; variável para guardar a posição vertical do asteroide 3
+                WORD 2   ; variável para guardar a posição vertical do asteroide 4
 
-VAR_AST_POS_H_0: WORD 1   ; variável para guardar a posição horizontal do asteroide 0
-VAR_AST_POS_H_1: WORD 2   ; variável para guardar a posição horizontal do asteroide 1
-VAR_AST_POS_H_2: WORD 2   ; variável para guardar a posição horizontal do asteroide 2
-VAR_AST_POS_H_3: WORD 2   ; variável para guardar a posição horizontal do asteroide 3
-VAR_AST_POS_H_4: WORD 3   ; variável para guardar a posição horizontal do asteroide 4
+VAR_AST_POS_H:  WORD 1   ; variável para guardar a posição horizontal do asteroide 0
+                WORD 2   ; variável para guardar a posição horizontal do asteroide 1
+                WORD 2   ; variável para guardar a posição horizontal do asteroide 2
+                WORD 2   ; variável para guardar a posição horizontal do asteroide 3
+                WORD 3   ; variável para guardar a posição horizontal do asteroide 4
+
+VAR_AST_LIM:    WORD 25   ; variável para guardar o limite do asteroide 0
+                WORD 32   ; variável para guardar o limite do asteroide 1
+                WORD 25   ; variável para guardar o limite do asteroide 2
+                WORD 32  ; variável para guardar o limite do asteroide 3
+                WORD 25   ; variável para guardar o limite do asteroide 4
 
 VAR_POS_H_ALVO: WORD 0    ; variável para guardar a posição horizontal do objeto a desenhar
 VAR_POS_V_ALVO: WORD 0    ; variável para guardar a posição vertical do objeto a desenhar
@@ -179,6 +193,7 @@ DEF_NAVE:
     WORD 0, CINZ_ESC, CINZ_CLR, CINZ_ESC, CINZ_CLR, CINZENTO, CINZENTO, CINZENTO, CINZ_CLR, CINZ_ESC, CINZ_CLR, CINZ_ESC, 0         
     WORD 0, 0, CINZ_ESC, 0, 0, CINZ_CLR, CINZ_CLR, CINZ_CLR, 0, 0, CINZ_ESC, 0, 0                   
 
+AST_LOCK:    LOCK 0
 SONDA_LOCK:  LOCK 0
 NAVE_LOCK:   LOCK 0
 START_LOCK:  LOCK 0
@@ -187,7 +202,7 @@ START_LOCK:  LOCK 0
 ; * Tabela de interrupções
 ; ******************************************************************************
 
-tab: WORD 0
+tab: WORD int_ast
      WORD int_sonda
      WORD 0
      WORD 0
@@ -222,6 +237,14 @@ loop_sondas:
 						      ; Cada processo fica com uma cópia independente dos registos, R11 serve como offset
 	CMP  R11, 1			      ; já criou as instâncias todas?
     JNZ	loop_sondas	          ; se não, continua
+
+MOV R11, 0
+loop_asteroides:
+	ADD	R11, 1			      ; próxima sonda
+	CALL	init_asteroides	      ; cria uma nova instância do processo sonda (o valor de R11 distingue-as)
+						      ; Cada processo fica com uma cópia independente dos registos, R11 serve como offset
+	CMP  R11, 5			      ; já criou as instâncias todas?
+    JNZ	loop_asteroides          ; se não, continua
 
     MOV  R1, [START_LOCK]     ; Bloqueia o processo principal
 
@@ -423,25 +446,15 @@ int_sonda:
     MOV [SONDA_LOCK], R0      ; desbloqueia o processo da sonda
     POP R0
     RFE 
-
+int_ast:
+    PUSH R0
+    MOV R0, 0
+    MOV [AST_LOCK], R0        ; desbloqueia o processo da sonda
+    POP R0
+    RFE 
 ; *********************************************************************************
 ; Ações do teclado
 ; *********************************************************************************
-
-debug_asteroide:        ; TEMP! - Hardcoded de forma que o asteroide 0 se mova para a direita de forma obrigatória  
-
-    PUSH R0
-    PUSH R1
-    PUSH R2
-    MOV R0, VAR_AST_POS_V_0
-    MOV R1, VAR_AST_POS_H_0
-    MOV R2, 1 ; direção do asteroide, esquerda para a direita
-    CALL atualiza_asteroide
-    POP R2
-    POP R1
-    POP R0
-    JMP ha_tecla
-
 
 atualiza_asteroide:           ; TEMP - assume R0, R1 e R2 como os endreços das coordenadas e a direcção do asteroide
     PUSH R10
@@ -551,10 +564,6 @@ testa_tecla:
     CMP R1, R8         
     JZ  dispara_sonda
     POP R0
-
-    MOV R8, TEC_8      ; coloca o ID da tecla F em R8
-    CMP R1, R8         
-    JZ debug_asteroide
 
     JMP ha_tecla       ; testa se a tecla permanece premida
 
@@ -760,4 +769,114 @@ aguarda_inicio_s:
     YIELD
     JMP sonda
 ; *********************************************************************************
+
+; *********************************************************************************
+; Processo - Asteroides
+; *********************************************************************************
+PROCESS SP_asteroides
+
+init_asteroides:
+    MOV	R1, TAMANHO_PILHA	; tamanho em palavras da pilha de cada processo
+    PUSH R11
+    SUB R11, 1
+    MUL	R1, R11			    ; TAMANHO_PILHA vezes o nº da instância do asteroide
+    SUB	SP, R1		        ; inicializa SP deste asteroide, relativo ao SP indicado inicalmente
+    MOV R10, R11            ;
+    POP R11
+    SHL R10, 1              ; multiplica o offset da instância por 2, R10 é agora o offset em bytes
+
+    MOV R9, VAR_AST_LIM     ; coloca o endereço do limite do asteroide em R9
+    ADD R9, R10             ; coloca em R9 o endereço do limite do asteroide
+
+    MOV R1, VAR_AST_POS_V   ; coloca o endereço da posição vertical do asteroide em R1
+    MOV R2, VAR_AST_POS_H   ; coloca o endereço da posição horizontal do asteroide em R2
+    MOV R3, VAR_AST_ON      ; coloca o endereço do estado do asteroide em R3
+
+calc_offset_a:              ; calcula o offset horizontal a aplicar por ciclo com base na instância, GUARDA EM R0
+    CMP R11, 5              ; se a instância for 5
+    JZ asteroide_esq        ; salta para o código do asteroide da esquerda
+    CMP R11, 4              ; se a instância for 4
+    JZ asteroide_dir        ; salta para o código do asteroide do meio
+    CMP R11, 3              ; se a instância for 3
+    JZ asteroide_meio       ; salta para o código do asteroide do meio
+    CMP R11, 2              ; se a instância for 2
+    JZ asteroide_esq        ; salta para o código do asteroide da direita
+    CMP R11, 1              ; se a instância for 1
+    JZ asteroide_dir        ; salta para o código do asteroide da esquerda
+
+
+asteroide_esq:              ; asteroides que se movem para a esquerda
+    MOV R1, -1               ; coloca o offset horizontal do asteroide par em R0
+    JMP asteroides          ; salta para o código que move o asteroide
+
+asteroide_dir:              ; asteroides que se movem para a direita
+    MOV R1, 1               ; coloca o offset horizontal do asteroide ímpar em R0
+    JMP asteroides          ; salta para o código que move o asteroide
+    
+asteroide_meio:
+    MOV R1, 0               ; coloca o offset horizontal do asteroide do meio em R0
+    JMP asteroides          ; salta para o código que move o asteroide
+
+asteroides:
+    MOV R5, [VAR_STATUS]
+    CMP R5, 0
+    JZ aguarda_inicio_a
+    EI0
+    EI1
+    EI
+
+    JMP asteroide_check
+
+asteroide_check:
+    MOV R5, [AST_LOCK]    
+    MOV R4, [R3+R10]        ; coloca o estado do asteroide em R1
+    CMP R4, 1               ; se o asteroide estiver ligado
+    JZ asteroide_on        ; salta para o código que move o asteroide
+    JMP asteroide_off      ; salta para o código que desliga o asteroide
+
+asteroide_on:
+    PUSH R10                ; guarda o valor de R10
+    PUSH R11                ; guarda o valor de R11
+
+    MOV R4, [R2+R10]        ; coloca a posição horizontal do asteroide em R4
+    ADD R4, R0              ; adiciona o offset horizontal do asteroide
+    MOV [R2+R10], R4        ; atualiza a posição horizontal do asteroide
+    MOV R11, R4             ; coloca a posição horizontal do asteroide em R11
+
+    MOV R4, [R1+R10]        ; coloca a posição vertical do asteroide em R4
+    ADD R4, 1               ; adiciona o offset vertical do asteroide
+    MOV [R1+R10], R4        ; atualiza a posição vertical do asteroide
+    MOV R10, R4             ; coloca a posição vertical do asteroide em R10
+    PUSH R4                 ; guarda o valor de R4
+    MOV R4, DEF_ASTEROIDE   ; coloca o endereço do desenho do asteroide em R4
+    CALL desenha_asteroide  ; desenha o asteroide
+    POP R4                  ; recupera o valor de R4
+    POP R11                 ; recupera o valor de R11
+    POP R10                 ; recupera o valor de R10
+
+    CMP R4, R9              ; se o asteroide tiver excedido um limite
+    JZ asteroide_reset      ; salta para o código que reinicia o asteroide
+
+    JMP asteroide_check     ; volta a verificar o estado do asteroide
+
+asteroide_reset:
+    MOV R5, [LIM_ASTEROIDE]
+    CMP R9, R5              ; se o limite for o limite para asteróides inócuos, desligar o asteroide
+    JZ asteroide_off        ; salta para o código que desliga o asteroide
+    JMP asteroide_fim       ; salta para o código que acaba o jogo por colisão
+
+asteroide_off:              ; desliga o asteroide
+    MOV R4, 0               ; coloca o estado do asteroide em R4
+    MOV [R3+R10], R4        ; atualiza o estado do asteroide
+    MOV R4, DEF_CLEAR_AST  
+    CALL desenha_asteroide  ; apaga o asteroide
+    JMP asteroide_check    ; volta a verificar o estado do asteroide
+
+asteroide_fim:
+    MOV R5, 0
+    MOV [VAR_STATUS], R5
+    JMP asteroides 
+aguarda_inicio_a:
+    YIELD
+    JMP asteroides
 
