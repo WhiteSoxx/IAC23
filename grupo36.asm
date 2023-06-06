@@ -483,3 +483,4 @@ toca_som:
     MOV [PLAY_VID], R0       ; toca o som
     POP R0
     RET
+
