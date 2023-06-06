@@ -457,9 +457,23 @@ desenha_linha:              ; Desenha uma linha arbitrária, usada por desenha_s
     JMP desenha_sprite     ; Desenha a linha seguinte
 
 escreve_pixel:              
-    MOV [DEFINE_LINHA], R1
-    MOV [DEFINE_COLUNA], R2
-    MOV [DEFINE_PIXEL], R3             
+    PUSH R0
+    MOV R0, MEMORIA_ECRA
+
+    PUSH R1                ; guarda o valor de R1
+    PUSH R2                ; guarda o valor de R2
+    PUSH R3                ; guarda o valor de R3
+                           ; É assumido presente em R1 a linha e em R2 a coluna, em R3 a cor
+	SHL	R1, 6		       ; linha * 64
+    ADD  R1, R2		       ; linha * 64 + coluna
+    SHL  R1, 1		   	   ; * 2, para ter o endereço da palavra
+	ADD	R0, R1		       ; MEMORIA_ECRA + 2 * (linha * 64 + coluna)
+	MOV	[R0], R3		   ; escreve cor no pixel
+    
+    POP R3
+    POP R2
+    POP R1
+    POP R0                  
     RET
 
 toca_som:
