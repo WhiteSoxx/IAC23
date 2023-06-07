@@ -792,8 +792,9 @@ PROCESS SP_energia
 
 energia:
     
-    SUB R1, 3      ;
-    CALL atualiza_energia   ;
+    SUB R1, 3             ;
+    MOV [VAR_ENERGIA], R1 ; atualiza o valor da energia
+    MOV [R4], R1        ; atualiza o valor do display da energia
 
 
 
