@@ -795,7 +795,9 @@ energia:
     
     SUB R1, 3             ;
     MOV [VAR_ENERGIA], R1 ; atualiza o valor da energia
-    MOV [R4], R1        ; atualiza o valor do display da energia
+    MOV [R4], R1          ; atualiza o valor do display da energia
+    CMP R1, 0             ;
+    JZ  fim_jogo          ;
 
 
 
