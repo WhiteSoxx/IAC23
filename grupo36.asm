@@ -927,12 +927,14 @@ asteroide_check:
     JZ asteroide_on         ; salta para o código que move o asteroide
     JMP asteroide_spawn     ; salta para o código que verifica o spawn do asteroide
 
-asteroide_on:
+asteroide_on:            ; código que move o asteroide 
+; R6 CONTEM O OFFSET DE MEMORIA PARA O AST. MINERÁVEL
             MOV R5, [AST_LOCK]      ; Bloqueia o processo dos asteroides
 
     PUSH R10                ; guarda o valor de R10
     PUSH R11                ; guarda o valor de R11
-    MOV R6, R10
+
+    MOV R5, R10             ; Usa R5 como offset para a memória temporáriamente, já qur R10 é uma coordenada
 
     MOV R4, [R2+R10]        ; coloca a posição horizontal do asteroide em R4
     ADD R4, R0              ; adiciona o offset horizontal do asteroide
@@ -961,11 +963,10 @@ asteroide_on:
 
     CMP R4, R9              ; se o asteroide tiver excedido um limite
     JZ asteroide_reset      ; salta para o código que reinicia o asteroide
-    
 
-    MOV R5, VAR_AST_ON
-    MOV R5, [R5+R6]         ; coloca o estado do asteroide em R5
-    CMP R5, 0
+    MOV R4, VAR_AST_ON
+    MOV R4, [R5+R4]         ; coloca o estado do asteroide em R5
+    CMP R4, 0
     JZ asteroide_off      ; se o asteroide estiver desligado, salta para o código que desliga graficamente o asteroide
 
     POP R11                 ; recupera o valor de R10
