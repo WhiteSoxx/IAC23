@@ -90,6 +90,8 @@ NAVE_Y       EQU  22
 LARGURA_NAVE EQU 13
 ALTURA_NAVE  EQU 10
 
+COL_DIST     EQU  3 ; Distância necessária para colisão entre sonda e asteroide
+
 COLISAO_MID_ASTEROIDE   EQU 20       ; altura máxima que os asteroides nao inocuos devem atingir
 COLISAO_ASTEROIDE       EQU 24      ; altura maxima que os asteroides devem atingir
 LIM_ASTEROIDE       EQU 29        ; altura maxima que os asteroides devem atingir
@@ -784,35 +786,48 @@ verifica_colisao:
     PUSH R10
     PUSH R11
 
-    MOV R0, VAR_AST_POS_V
-    MOV R3, VAR_AST_POS_H
-    MOV R4, VAR_AST_ON
-    MOV R5, VAR_AST_TIPO
     CALL sonda_offset       ; coloca em R2 a posição horizontal da sonda do meio
     MOV R7, R10             ; R7 retem o offset original da instancia da sonda
-    CMP R10, 2
-    JZ verifica_colisao_meio
+    ;CMP R10, 2              ; A sonda do meio ocupa a segunda posição na tabela de dados das sondas
+    ;JZ verifica_colisao_meio; Caso especial para verificar apenas a distância vertical ao asteroide 3, do meio 
     MOV R11, R10
-    ADD R11, 4              ; R11 é o valor imediatamente acima do offset maximo do asteroide a verificar
+    ADD R11, 6               ; R11 é o valor imediatamente acima do offset maximo do asteroide a verificar
+                            ; Existe aqui uma ineficiência. As sondas laterais verificam ambas o asteróide do meio, por
+                            ; impossível que seja uma colisão neste caso.
 
 
 loop_colisao:               ; R1 - Pos vertical da sonda, R2 - Pos horizontal da sonda
 
     MOV R0, VAR_AST_POS_V
     MOV R3, VAR_AST_POS_H
-    
+    MOV R4, VAR_AST_ON
+    MOV R5, VAR_AST_TIPO
+
     MOV R0, [R0+R10]        ; coloca a posição vertical do asteroide a verificar em R0
     MOV R3, [R3+R10]        ; coloca a posição horizontal do asteroide a verificar em R1
           
     ADD R4, R10             ; coloca o ENDREÇO do estado do asteroide a verificar em R2
     ADD R5, R10             ; coloca o ENDREÇO do tipo do asteroide a verificar em R3
 
-    ADD R3, 1
-    ; BUG!!! R2 não é a coord certa
-    CMP R3, R2              ; se a posição horizontal da sonda for igual à posição horizontal do asteroide
-    JZ efetua_colisao       ; salta para o código de colisão
+    SUB R0, R1              ; R0 é agora a distância vertical entre a sonda e o asteroide
+    CMP R0, -COL_DIST              
+    JLT fim_loop_colisao  ; se R0 for maior ou igual a -3, a sonda está no minimo imediatamente abaixo do asteroide
+colisao_vertical:
+    CMP R0, COL_DIST
+    JGT fim_loop_colisao       ; se a distância vertical for maior que 3, a sonda está acima do asteroide
+colisao_horizontal:
+    MOV R3, VAR_AST_POS_H
+    MOV R3, [R3+R10]        ; coloca a posição horizontal do asteroide a verificar em R1
+    SUB R3, R2              ; R3 é agora a distância horizontal entre a sonda e o asteroide
+    CMP R3, -COL_DIST
+    JLT fim_loop_colisao    ; se R3 for menor que -3, a sonda está demasiado afastada, em qualquer instância
+    CMP R3, COL_DIST
+    JGT fim_loop_colisao    ; se R3 for maior que 3, a sonda está demasiado afastada, em qualquer instância
+    JMP efetua_colisao
 
-    ADD R10, 2              ; Atualiza o contador do loop
+fim_loop_colisao:
+
+    ADD R10, 2              ; Atualiza o contador do loop, e verifica o asteroide seguinte
     CMP R10, R11            ; se o offset do asteroide a verificar for maior que o offset maximo
     JNZ loop_colisao        ; salta para o código de verificação do próximo asteroide
 
@@ -929,7 +944,7 @@ asteroide_check:
 
 asteroide_on:            ; código que move o asteroide 
 ; R6 CONTEM O OFFSET DE MEMORIA PARA O AST. MINERÁVEL
-            MOV R5, [AST_LOCK]      ; Bloqueia o processo dos asteroides
+    MOV R5, [AST_LOCK]      ; Bloqueia o processo dos asteroides
 
     PUSH R10                ; guarda o valor de R10
     PUSH R11                ; guarda o valor de R11
@@ -1005,12 +1020,13 @@ asteroide_spawn:
 
     SHR R6, 3               ; Isola o ultimo bit do número aleatório (0 ou 1)
     JZ  asteroide_check     ; 50% de chance de spawnar um asteroide POR PROCESSO,
+
     MOV R5, 1
     MOV [R3+R10], R5        ; atualiza o estado do asteroide
     MOV R6, [VAR_AST_NUM]
     ADD R6, R5              ; incrementa o número de asteroides ativos
     MOV [VAR_AST_NUM], R6   ; atualiza o número de asteroides ativos
-
+    
     PUSH R0                 ; guarda o valor de R0
     CALL numero_aleatorio   ; coloca um número aleatório entre 0 e 15 em R0
     MOV R5, VAR_AST_TIPO
