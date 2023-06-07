@@ -78,9 +78,10 @@ ROXO	     	EQU	0F60AH		; cor do pixel: preenchimento da nave em ARGB
 ; *********************************************************************************
 ; * Grandezas "físicas"
 ; *********************************************************************************
-SONDA_BASE     EQU 21          ; posição vertical inicial da sonda do meio
+SONDA_BASE      EQU 21          ; posição vertical inicial da sonda do meio
 SONDA_MAX       EQU 8           ; Altura max da sonda
-LSONDA_BASE     EQU 21          ; posição vertical inicial da sonda do meio
+LSONDA_V_OFFSET EQU 3           ; Offset da posição vertical inicial da sonda lateral
+LSONDA_H_OFFSET EQU 10            ; Offset da posição horizontal inicial da sonda lateral
 
 ENERGIA_BASE EQU 00064H   ; energia inicial
 DEC_ENERGIA_SONDA  EQU 5 ; decremento da energia por sonda lançada
@@ -131,9 +132,9 @@ VAR_COR_PIXEL: WORD COR_PIXEL ; variável para guardar a cor do pixel, default �
 VAR_PROX_SOM:  WORD 0         ; variável para guardar o próximo som a tocar, default é 0
 
 VAR_COR_SONDA:  WORD 0FFC0H      ; variável para guardar a cor da sonda, default é amarelo
-VAR_SONDA_POS:  WORD SONDA_BASE  ; variável para guardar a posição da sonda da esquerda 
-                WORD SONDA_BASE  ; variável para guardar a posição da sonda do meio
-                WORD SONDA_BASE  ; variável para guardar a posição da sonda da direita
+VAR_SONDA_POS:  WORD SONDA_BASE + LSONDA_V_OFFSET  ; variável para guardar a posição da sonda da esquerda 
+                WORD SONDA_BASE                    ; variável para guardar a posição da sonda do meio
+                WORD SONDA_BASE + LSONDA_V_OFFSET ; variável para guardar a posição da sonda da direita
 
 VAR_SONDA_ON:   WORD 0           ; variável para guardar o estado da sonda do meio (0 - desligada, 1 - ligada)
                 WORD 0           ; variável para guardar o estado da sonda da esquerda (0 - desligada, 1 - ligada)
@@ -177,7 +178,7 @@ DEF_ASTEROIDE:					; tabela que define o asteroide (cor, largura, pixels)
 	WORD		CAST_ESC, CAST_CLR, CAST_CLR, CAST_CLR, CAST_ESC	;
     WORD		CAST_ESC, CAST_CLR, CAST_CLR, CAST_CLR, CAST_ESC	;
     WORD		CAST_ESC, CAST_CLR, CAST_CLR, CAST_CLR, CAST_ESC    ;
-    WORD		       0, CAST_ESC, CAST_ESC, CAST_ESC, 0		    ;
+    WORD	    CAST_ESC, CAST_ESC, CAST_ESC, CAST_ESC, CAST_ESC    ;
 
 DEF_AST_NRG:					; tabela que define o asteroide (cor, largura, pixels)
 	WORD		LARGURA_AST     ; [DEF_AST + 0] largura do asteroide 1228
@@ -186,7 +187,7 @@ DEF_AST_NRG:					; tabela que define o asteroide (cor, largura, pixels)
 	WORD		CAST_ESC, ROXO, CAST_CLR, ROXO, CAST_ESC	;
     WORD		CAST_ESC, CAST_CLR, ROXO, CAST_CLR, CAST_ESC	;
     WORD		CAST_ESC, ROXO, CAST_CLR, ROXO, CAST_ESC    ;
-    WORD		       0, CAST_ESC, CAST_ESC, CAST_ESC, 0		    ;
+    WORD	    CAST_ESC, CAST_ESC, CAST_ESC, CAST_ESC, CAST_ESC    ;
 
 DEF_CLEAR_AST:				; tabela que define o asteroide (cor, largura, pixels)
     WORD		LARGURA_AST
@@ -768,8 +769,12 @@ m_sonda_off:
 
     MOV R1, 0            
     MOV R0, VAR_SONDA_ON    ; coloca o endreço do estado da sonda em R0
-    MOV [R0+R10], R1        ; desliga a sonda do meio
+    MOV [R0+R10], R1        ; desliga a sonda
     MOV R1, SONDA_BASE      ; coloca a posição vertical base da sonda do meio em R1
+    CMP R10, 2
+    JZ sonda_off_fim
+    ADD R1, LSONDA_V_OFFSET ; decrementa a posição vertical da sonda lateral
+sonda_off_fim:
     MOV R0, VAR_SONDA_POS   ; coloca o endreço da posição vertical da sonda em R0
     MOV [R0+R10], R1        ; atualiza a posição vertical da sonda do meio
             MOV R1, [SONDA_LOCK]     ; pára o update da sonda lendo o lock
@@ -801,7 +806,7 @@ desenha_sonda:
 sonda_offset:               ; COLOCA EM R2 A POSIÇÃO HORIZONTAL DA SONDA, ASSUME EM R1 A POS VERTICAL e R11 o OFFSET DA INSTÂNCIA
     PUSH R3
     PUSH R4
-    MOV R4, 8              ; Offset da sonda lateral ao meio da nave
+    MOV R4, LSONDA_H_OFFSET              ; Offset da sonda lateral ao meio da nave
     MOV R2, 32              ; coloca a posição horizontal base da sonda do meio em R2 (constante 32)
     MOV R3, SONDA_BASE      ;
     SUB R3, R1              ; R3 é a distância vertical viajada pela sonda do meio
