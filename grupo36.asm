@@ -83,7 +83,8 @@ SONDA_MAX       EQU 8           ; Altura max da sonda
 LSONDA_BASE     EQU 21          ; posição vertical inicial da sonda do meio
 
 ENERGIA_BASE EQU 00064H   ; energia inicial
-DEC_ENERGIA  EQU 00003H ; decremento da energia por sonda lançada
+DEC_ENERGIA_SONDA  EQU 5 ; decremento da energia por sonda lançada
+DEC_ENERGIA_TEMPO  EQU 3 ; decremento da energia por cada ciclo do relógio "energia"
 
 NAVE_X       EQU  26
 NAVE_Y       EQU  22
@@ -210,10 +211,14 @@ DEF_NAVE:
     WORD 0, CINZ_ESC, CINZ_CLR, CINZ_ESC, CINZ_CLR, CINZENTO, CINZENTO, CINZENTO, CINZ_CLR, CINZ_ESC, CINZ_CLR, CINZ_ESC, 0         
     WORD 0, 0, CINZ_ESC, 0, 0, CINZ_CLR, CINZ_CLR, CINZ_CLR, 0, 0, CINZ_ESC, 0, 0                   
 
+; ******************************************************************************
+; * LOCKS
+; ******************************************************************************
 AST_LOCK:    LOCK 0
 SONDA_LOCK:  LOCK 0
 NAVE_LOCK:   LOCK 0
 START_LOCK:  LOCK 0
+PAUSA_LOCK:  LOCK 0
 
 ; ******************************************************************************
 ; * Tabela de interrupções
@@ -278,6 +283,17 @@ sum_display:                  ; TEMP!
     POP R0                    ; foi dado push antes do salto, R9 é o incremento/decremento
 
     JMP ha_tecla              ; ação efetuada, não testar teclado novamente
+
+pausa_check:
+    PUSH R0
+    MOV R0, [VAR_STATUS]
+    CMP R0, 2
+    JNZ pausa_check_fim
+pausa_jogo:
+    MOV R0, [PAUSA_LOCK]
+pausa_check_fim:
+    POP R0
+    RET
 
 
 ; **********************************************************************
@@ -508,9 +524,11 @@ espera_tecla:          ; neste ciclo espera-se até uma tecla ser premida
     PUSH R1            ; guarda a linha e coluna na pilha
 
     PUSH R10
-    MOV  R10, [VAR_STATUS]        ; guarda o ID da tecla premida em R8
+    MOV  R10, [VAR_STATUS]        
     CMP  R10, 0                   ; se o jogo não estiver iniciado
     JZ testa_start
+    CMP  R10, 2                   ; se o jogo estiver em pausa
+    JZ testa_empausa
 
 testa_tecla:
     POP R10
@@ -539,6 +557,10 @@ testa_tecla:
     JZ  dispara_sonda
     POP R0
 
+    MOV R8, TEC_0      ; coloca o ID da tecla 0 em R8
+    CMP R1, R8
+    JZ  toggle_pausa
+
     JMP ha_tecla       ; testa se a tecla permanece premida
 
 testa_start:
@@ -548,6 +570,16 @@ testa_start:
     MOV R8, TEC_C      ; coloca o ID da tecla 0 em R8
     CMP R1, R8
     JZ  inicio_jogo
+
+    JMP ha_tecla       ; testa se a tecla permanece premida
+
+testa_empausa:
+    POP R10
+    POP R1             ; retira da pilha a linha e coluna da tecla premida
+
+    MOV R8, TEC_0      ; coloca o ID da tecla 0 em R8
+    CMP R1, R8
+    JZ  resume
 
     JMP ha_tecla       ; testa se a tecla permanece premida
 
@@ -574,6 +606,17 @@ inicio_jogo:
     EI
     JMP tec_ciclo            ; volta ao ciclo principal do teclado
 
+resume: 
+    MOV [PAUSA_LOCK], R0
+toggle_pausa:
+    MOV R1, [VAR_STATUS]     ; coloca a variável de estado do jogo em R1
+    SUB R1, 1                ; Se 2, passa para 1, se 1, passa para 0
+    MOV R0, 1                ; "Máscara" para o XOR
+    XOR R1, R0               ; inverte o valor do bit 1, que indica se o jogo está em pausa
+    ADD R1, 1                ; Se 0, passa para 1, se 1, passa para 2
+    MOV [VAR_STATUS], R1     ; atualiza o valor da variável de estado do jogo
+    JMP ha_tecla             ; volta ao ciclo principal do teclado
+
 dispara_sonda:    ; Ativa a sonda na posição R0
     PUSH R1
     PUSH R2
@@ -589,7 +632,7 @@ dispara_sonda:    ; Ativa a sonda na posição R0
     CMP R1, R2     ; se a sonda do meio acaba de ligar
     JZ som_cooldown; salta para o código do som de disparo
     PUSH R10
-    MOV R10, DEC_ENERGIA
+    MOV R10, DEC_ENERGIA_SONDA
     CALL atualiza_energia
     POP R10
     JNZ som_disparo;
@@ -677,7 +720,7 @@ init_sonda:
     SHL R10, 1              ; multiplica o offset da instância por 2, R10 é agora o offset em bytes
 
 sonda:
-    
+    CALL pausa_check        ; verifica se o jogo está em pausa
     MOV R1, [VAR_STATUS]
     CMP R1, 0
     JZ aguarda_inicio_s
@@ -690,7 +733,7 @@ m_sonda_check:
     MOV R1, [R0+R10]         ; coloca o estado da sonda  em R1
     CMP R1, 1                ; se a sonda do meio estiver ligada
     JZ m_sonda_on            ; salta para o código da sonda do meio ligada
-     YIELD
+    YIELD
     JMP sonda                ; caso contrário, verifica de novo  (TEMP, DEVE VERIFICAR RESTANTES SONDAS)
 
 m_sonda_on:
@@ -937,6 +980,7 @@ asteroides:
     JMP asteroide_check
 
 asteroide_check:
+    CALL pausa_check        ; verifica se o jogo está em pausa
     MOV R4, [R3+R10]        ; coloca o estado do asteroide em R1
     CMP R4, 1               ; se o asteroide estiver ligado
     JZ asteroide_on         ; salta para o código que move o asteroide
