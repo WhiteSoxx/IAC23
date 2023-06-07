@@ -242,9 +242,7 @@ inicio:		                  ; inicializações
     MOV BTE, tab              ; coloca o endereço da tabela de interrupções em BTE
 
     MOV R1, 1                
-    MOV  [APAGA_AVISO], R1	  ; apaga o aviso de nenhum cenário selecionado (o valor de R1 não é relevante)
-    MOV  [APAGA_ECRÃ], R1	  ; apaga todos os pixels já desenhados (o valor de R1 não é relevante)
-    MOV  [SELECIONA_CENARIO], R1 ; seleciona o cenário 1 (Splash Screen)
+    CALL reset_ecra           ; limpa o ecrã e desenha splash screen
     
     MOV  R1, 0
     MOV  R4, DISPLAYS         ; endereço do periférico dos displays
@@ -270,6 +268,15 @@ loop_asteroides:
     JNZ	loop_asteroides          ; se não, continua
 
     MOV  R1, [START_LOCK]     ; Bloqueia o processo principal
+
+; ******************************************************************************
+; * reset_ecra - Rotina que apaga o ecrã e coloca um cenário à escolha (R1)
+; ******************************************************************************
+reset_ecra:
+    MOV  [APAGA_AVISO], R1	  ; apaga o aviso de nenhum cenário selecionado (o valor de R1 não é relevante)
+    MOV  [APAGA_ECRÃ], R1	  ; apaga todos os pixels já desenhados (o valor de R1 não é relevante)
+    MOV  [SELECIONA_CENARIO], R1 ; seleciona o cenário 1 (Splash Screen)
+    RET
 
 sum_display:                  ; TEMP!
 
@@ -562,6 +569,10 @@ testa_tecla:
     CMP R1, R8
     JZ  toggle_pausa
 
+    MOV R8, TEC_4      ; coloca o ID da tecla 0 em R8
+    CMP R1, R8
+    JZ  debug_reset
+
     JMP ha_tecla       ; testa se a tecla permanece premida
 
 testa_start:
@@ -603,9 +614,64 @@ inicio_jogo:
     MOV R1, [VAR_STATUS]     ; coloca a variável de estado do jogo em R1
     MOV R1, 1                ; coloca o valor 1 em R1, para indicar que o jogo está iniciado
     MOV [VAR_STATUS], R1     ; atualiza o valor da variável de estado do jogo
+    EI0
     EI1
     EI
     JMP tec_ciclo            ; volta ao ciclo principal do teclado
+
+debug_reset:
+    CALL fim_jogo
+    JMP tec_ciclo            ; volta ao ciclo principal do teclado
+
+fim_jogo:
+    PUSH R0
+    PUSH R1
+    PUSH R2
+    PUSH R3
+    DI
+    MOV R1, [VAR_STATUS]     ; coloca a variável de estado do jogo em R1
+    MOV R1, 0                ; coloca o valor 0 em R1, para indicar que o jogo está terminado
+    MOV [VAR_STATUS], R1     ; atualiza o valor da variável de estado do jogo
+    MOV R0, 0
+    MOV R2, 30               ; DE VAR_SONDA_ON à ultima VAR a ser reiniciada a 0, há 14 WORDS
+    MOV R3, VAR_SONDA_ON
+    ADD R2, R3
+    vars_zero_loop:
+        MOV [R3], R0
+        ADD R3, 2
+        CMP R3, R2
+        JNZ vars_zero_loop
+    MOV R0, V_BASE_AST
+    MOV R2, 12               ; 5 VARS DE ASTEROIDE 
+    MOV R3, VAR_AST_POS_V
+    ADD R2, R3    
+    ast_vpos_loop:
+        MOV [R3], R0
+        ADD R3, 2
+        CMP R3, R2
+        JNZ ast_vpos_loop
+    MOV R0, H_BASE_AST_1
+    MOV [R3], R0               ; R3 aponta para a variavel de posição horizontal do asteroide
+    ADD R3, 2
+    MOV R0, H_BASE_AST_3
+    ADD R2, 6
+    ast_hpos_loop:
+        MOV [R3], R0
+        ADD R3, 2
+        CMP R3, R2
+        JNZ ast_hpos_loop
+    MOV R0, H_BASE_AST_5
+    MOV [R3], R0               ; R3 aponta para a variavel de posição horizontal do asteroide
+    
+    MOV R1, 2
+    CALL reset_ecra
+
+    POP R3
+    POP R2
+    POP R1
+    POP R0
+    EI
+    RET
 
 resume: 
     MOV [PAUSA_LOCK], R0
@@ -1037,7 +1103,7 @@ asteroide_on:            ; código que move o asteroide
     POP R10                 ; recupera o valor de R11
                             ; APÓS INTERRUPÇÃO, SONDA PODE TER COLIDIDO COM ASTEROIDE
 
-    JMP asteroide_check     ; volta a verificar o estado do asteroide
+    JMP asteroides          ; volta a verificar o estado do asteroide
 
 asteroide_reset:
 
@@ -1054,7 +1120,7 @@ asteroide_reset:
 
     ;JMP asteroide_fim      ; salta para o código que acaba o jogo por colisão
     ;R10 e R11 possívelmente trocados neste ponto. Irrelevante,no fim de jogo o erro não é visível
-    JMP asteroide_off       ; salta para o código que desliga o asteroide
+    JMP asteroide_fim       ; salta para o código que desliga o asteroide
 
 asteroide_spawn:  
     YIELD    
@@ -1115,13 +1181,16 @@ asteroide_off:              ; desliga o asteroide
     MOV R6, 0
     MOV [R5+R10], R6         ; atualiza o tipo do asteroide
 
-    JMP asteroide_check     ; volta a verificar o estado do asteroide
+    JMP asteroides     ; volta a verificar o estado do asteroide
 
 asteroide_fim:              ; NOT FUCKING WORKING
     POP R11                 ; recupera o valor de R11
     POP R10                 ; recupera o valor de R10
     MOV R5, 0
     MOV [VAR_STATUS], R5
+    
+    CALL fim_jogo
+
     JMP asteroides 
 aguarda_inicio_a:
     YIELD
