@@ -81,9 +81,6 @@ ROXO	     	EQU	0F60AH		; cor do pixel: preenchimento da nave em ARGB
 SONDA_BASE     EQU 21          ; posição vertical inicial da sonda do meio
 SONDA_MAX       EQU 8           ; Altura max da sonda
 LSONDA_BASE     EQU 21          ; posição vertical inicial da sonda do meio
-RSONDA_BASE     EQU 21          ; posição vertical inicial da sonda do meio
-LSONDA_OFFSET   EQU -4          ; offset da sonda da esquerda
-RSONDA_OFFSET   EQU 4           ; offset da sonda da direita
 
 ENERGIA_BASE EQU 00064H   ; energia inicial
 DEC_ENERGIA  EQU 00003H ; decremento da energia por sonda lançada
@@ -705,7 +702,14 @@ m_sonda_on:
     CALL desenha_sonda       ; desenha a sonda do meio na posição atual
     SUB R1, 1                ; decrementa a posição vertical da sonda
     MOV [R0+R10], R1         ; atualiza a posição vertical da sonda 
-        MOV R1, [SONDA_LOCK]     ; pára o update da sonda lendo o lock
+
+    CALL verifica_colisao    ; verifica se a sonda colidiu com um asteróide
+    MOV R0, VAR_SONDA_ON     ; coloca o endreço do estado da sonda em R0
+    MOV R0, [R0+R10]         ; coloca o estado da sonda  em R1
+    CMP R0, 0                ; se a sonda do meio estiver desligada
+    JZ m_sonda_off           ; se colidiu, desliga a sonda do meio
+
+    MOV R1, [SONDA_LOCK]     ; pára o update da sonda lendo o lock
 
     JMP sonda                ; volta ao ciclo principal da sonda
 
@@ -749,25 +753,112 @@ desenha_sonda:
     POP R0                  ; recupera o valor de R0
     RET
 
-sonda_offset:               ; COLOCA EM R2 A POSIÇÃO HORIZONTAL DA SONDA
+sonda_offset:               ; COLOCA EM R2 A POSIÇÃO HORIZONTAL DA SONDA, ASSUME EM R1 A POS VERTICAL e R11 o OFFSET DA INSTÂNCIA
     PUSH R3
+    PUSH R4
+    MOV R4, 8              ; Offset da sonda lateral ao meio da nave
     MOV R2, 32              ; coloca a posição horizontal base da sonda do meio em R2 (constante 32)
     MOV R3, SONDA_BASE      ;
-    SUB R3, R1              ;
+    SUB R3, R1              ; R3 é a distância vertical viajada pela sonda do meio
     MUL R3, R11             ; multiplica a posição vertical da sonda do meio pelo offset da instância
     ADD R2, R3              ; coloca em R2 a posição horizontal da sonda do meio
+    MUL R4, R11             ; multiplica o offset da instância pelo offset da sonda lateral
+    ADD R2, R4              ; coloca em R2 a posição horizontal da sonda
+    POP R4
     POP R3
     RET
+
 aguarda_inicio_s:
     YIELD
     JMP sonda
+
+verifica_colisao:
+    PUSH R0
+    PUSH R1
+    PUSH R2
+    PUSH R3
+    PUSH R4
+    PUSH R5
+    PUSH R6
+    PUSH R7
+    PUSH R10
+    PUSH R11
+
+    MOV R0, VAR_AST_POS_V
+    MOV R3, VAR_AST_POS_H
+    MOV R4, VAR_AST_ON
+    MOV R5, VAR_AST_TIPO
+    CALL sonda_offset       ; coloca em R2 a posição horizontal da sonda do meio
+    MOV R7, R10             ; R7 retem o offset original da instancia da sonda
+    CMP R10, 2
+    JZ verifica_colisao_meio
+    MOV R11, R10
+    ADD R11, 4              ; R11 é o valor imediatamente acima do offset maximo do asteroide a verificar
+
+
+loop_colisao:               ; R1 - Pos vertical da sonda, R2 - Pos horizontal da sonda
+
+    MOV R0, VAR_AST_POS_V
+    MOV R3, VAR_AST_POS_H
+    
+    MOV R0, [R0+R10]        ; coloca a posição vertical do asteroide a verificar em R0
+    MOV R3, [R3+R10]        ; coloca a posição horizontal do asteroide a verificar em R1
+          
+    ADD R4, R10             ; coloca o ENDREÇO do estado do asteroide a verificar em R2
+    ADD R5, R10             ; coloca o ENDREÇO do tipo do asteroide a verificar em R3
+
+    ADD R3, 1
+    ; BUG!!! R2 não é a coord certa
+    CMP R3, R2              ; se a posição horizontal da sonda for igual à posição horizontal do asteroide
+    JZ efetua_colisao       ; salta para o código de colisão
+
+    ADD R10, 2              ; Atualiza o contador do loop
+    CMP R10, R11            ; se o offset do asteroide a verificar for maior que o offset maximo
+    JNZ loop_colisao        ; salta para o código de verificação do próximo asteroide
+
+fim_verifica_colisao:
+    POP R11
+    POP R10
+    POP R7
+    POP R6
+    POP R5
+    POP R4
+    POP R3
+    POP R2
+    POP R1
+    POP R0
+    RET
+
+verifica_colisao_meio:
+    MOV R0, [R0+R10]        ; coloca a posição vertical do asteroide a verificar em R0
+    ADD R0, 3               ; TEMPOORARIOcoloca em R0 a posição fa fronteira
+    CMP R0, R1              ; se a posição vertical da sonda for maior que a posição vertical do asteroide
+    JZ efetua_colisao       ; salta para o código de colisão
+
+
+efetua_colisao:
+    PUSH R0
+    PUSH R1
+    MOV R0, 0
+    MOV R1, 25
+    MOV [R4], R0            ; desliga o asteroide
+
+    MOV R1, VAR_SONDA_ON    ; coloca o endreço do estado da sonda em R0
+    ADD R1, R7               
+    MOV [R1], R0
+
+    POP R1
+    POP R0
+    JMP fim_verifica_colisao
+
+
 ; *********************************************************************************
 
 ; *********************************************************************************
 ; Processo - Asteroides
 ; *********************************************************************************
 PROCESS SP_asteroides
-
+; R11 - INSTANCIA DO ASTEROIDE
 init_asteroides:
     MOV	R1, TAMANHO_PILHA	; tamanho em palavras da pilha de cada processo
     MOV R0, R11
@@ -778,6 +869,7 @@ init_asteroides:
     MOV R11, R0
     SHL R10, 1              ; multiplica o offset da instância por 2, R10 é agora o offset em bytes
 
+    ; R0 OFFSET HORIZONTAL DO ASTEROIDE
     MOV R1, VAR_AST_POS_V   ; coloca o endereço da posição vertical do asteroide em R1
     MOV R2, VAR_AST_POS_H   ; coloca o endereço da posição horizontal do asteroide em R2
     MOV R3, VAR_AST_ON      ; coloca o endereço do estado do asteroide em R3
@@ -836,9 +928,11 @@ asteroide_check:
     JMP asteroide_spawn     ; salta para o código que verifica o spawn do asteroide
 
 asteroide_on:
+            MOV R5, [AST_LOCK]      ; Bloqueia o processo dos asteroides
 
     PUSH R10                ; guarda o valor de R10
     PUSH R11                ; guarda o valor de R11
+    MOV R6, R10
 
     MOV R4, [R2+R10]        ; coloca a posição horizontal do asteroide em R4
     ADD R4, R0              ; adiciona o offset horizontal do asteroide
@@ -849,8 +943,8 @@ asteroide_on:
     ADD R4, 1               ; adiciona o offset vertical do asteroide
     MOV [R1+R10], R4        ; atualiza a posição vertical do asteroide
     MOV R10, R4             ; coloca a posição vertical do asteroide em R10
+   
     PUSH R4                 ; guarda o valor de R4
-
 
     MOV R4, DEF_CLEAR_AST
     SUB R11, R0             ; Subs servem para apagar o asteroide na posição anterior
@@ -860,45 +954,48 @@ asteroide_on:
     ADD R11, R0
     ADD R10, 1
     MOV R4, DEF_ASTEROIDE   ; coloca o endereço do desenho do asteroide em R4
-    ADD R4, R6
+    ADD R4, R6              ; adiciona o offset vertical de memoória ao endreço
     CALL desenha_asteroide  ; desenha o asteroide
     
     POP R4                  ; recupera o valor de R4 para verificar a pos. vertical
+
     CMP R4, R9              ; se o asteroide tiver excedido um limite
     JZ asteroide_reset      ; salta para o código que reinicia o asteroide
+    
 
+    MOV R5, VAR_AST_ON
+    MOV R5, [R5+R6]         ; coloca o estado do asteroide em R5
+    CMP R5, 0
+    JZ asteroide_off      ; se o asteroide estiver desligado, salta para o código que desliga graficamente o asteroide
 
-    POP R11                 ; recupera o valor de R11
-    POP R10                 ; recupera o valor de R10
-        MOV R5, [AST_LOCK]      ; Bloqueia o processo dos asteroides
+    POP R11                 ; recupera o valor de R10
+    POP R10                 ; recupera o valor de R11
+                            ; APÓS INTERRUPÇÃO, SONDA PODE TER COLIDIDO COM ASTEROIDE
 
     JMP asteroide_check     ; volta a verificar o estado do asteroide
 
 asteroide_reset:
-        MOV R5, [AST_LOCK]      ; Bloqueia o processo dos asteroides
 
     MOV R5, LIM_ASTEROIDE
     CMP R9, R5              ; se o limite for o limite para asteróides inócuos, desligar o asteroide
     JZ  asteroide_off       ; salta para o código que desliga o asteroide
     
-    MOV R6, R10             ; BODGED!!!!
-    POP R10                 ; recupera o valor de R11 para R10 (OFFSET DE MEMÓRIA)
-    PUSH R6                 ; guarda o valor de R10 antigo (POSIÇÃO)
-    SUB R10, 1              ; decrementa o offset de memória
-    SHL R10, 1              ; multiplica o offset de memória por 2
+    ;MOV R6, R10             ; !!!!Solução atamancada!!!
+    ;POP R10                 ; recupera o valor de R11 para R10 (OFFSET DE MEMÓRIA)
+    ;PUSH R6                 ; guarda o valor de R10 antigo (POSIÇÃO)
+    ;SUB R10, 1              ; decrementa o offset de memória
+    ;SHL R10, 1              ; multiplica o offset de memória por 2
 
-    MOV R5, VAR_AST_ON
-    MOV R5, [R5+R10];
-    CMP R5, 0               ;
-    JZ  asteroide_off       ; salta para o código que desliga o asteroide
+
     ;JMP asteroide_fim      ; salta para o código que acaba o jogo por colisão
     ;R10 e R11 possívelmente trocados neste ponto. Irrelevante,no fim de jogo o erro não é visível
     JMP asteroide_off       ; salta para o código que desliga o asteroide
 
 asteroide_spawn:  
     YIELD    
+
     MOV R4, [VAR_AST_NUM]   ; coloca o número de asteroides ativos em R4
-    CMP R4, 4               ; se o número de asteroides ativos for 3
+    CMP R4, 4               ; se o número de asteroides ativos for 4
     JZ asteroide_check      ; Volta para o início do ciclo
     PUSH R0                 ; guarda o valor de R0
     CALL numero_aleatorio   ; coloca um número aleatório entre 0 e 15 em R0
@@ -919,15 +1016,16 @@ asteroide_spawn:
     SHR R0, 2               ; Isola os ultimos 2 bits do número aleatório (0 a 3)
     JNZ  fim_spawn          ; 25% de chance de spawnar um asteroide minerável
     MOV R6, 1
-    MOV [R5+R10], R6         ; atualiza o tipo do asteroide
+    MOV [R5+R10], R6        ; atualiza o tipo do asteroide
 
 fim_spawn:
     MOV R6, [R5+R10]
     MOV R5, 2
     MUL R6, R5              ; multiplica o tipo do asteroide por 2
     MOV R5, 27
-    MUL R6, R5             ; Numero de words no asteroide, contingente no mineravel estar definido seguidamente
+    MUL R6, R5              ; Numero de words no asteroide, contingente no mineravel estar definido seguidamente
     POP R0   
+
     JMP asteroide_on        ; começa a mover o asteroide
 
 
@@ -940,9 +1038,11 @@ asteroide_off:              ; desliga o asteroide
     MOV [R3+R10], R4        ; atualiza o estado do asteroide
     MOV [R1+R10], R7        ; Reinicia a posição vertical do asteroide
     MOV [R2+R10], R8        ; Reinicia a posição horizontal do asteroide
+    
     MOV R5, 1
+
     MOV R6, [VAR_AST_NUM]
-    SUB R6, R5              ; incrementa o número de asteroides ativos
+    SUB R6, R5              ; decrementa o número de asteroides ativos
     MOV [VAR_AST_NUM], R6   ; atualiza o número de asteroides ativos
 
     MOV R5, VAR_AST_TIPO
