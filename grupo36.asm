@@ -123,13 +123,13 @@ imagem_hexa:
 	BYTE	00H			; imagem em memória dos displays hexadecimais 
 						; (inicializada a zero, mas podia ser outro valor qualquer).
 
-VAR_LINHA:  WORD 0            ; variável para guardar a linha atual
-VAR_COLUNA: WORD 0            ; variável para guardar a coluna atual
-VAR_TECCOUNT: WORD -1         ; variável para guardar o contador para conversão de teclas
-VAR_ENERGIA: WORD ENERGIA_BASE; variável para guardar a energia (ver constante ENERGIA_BASE)
+VAR_LINHA:      WORD 0            ; variável para guardar a linha atual
+VAR_COLUNA:     WORD 0            ; variável para guardar a coluna atual
+VAR_TECCOUNT:   WORD -1         ; variável para guardar o contador para conversão de teclas
+VAR_ENERGIA:    WORD ENERGIA_BASE; variável para guardar a energia (ver constante ENERGIA_BASE)
 
-VAR_COR_PIXEL: WORD COR_PIXEL ; variável para guardar a cor do pixel, default é vermelho
-VAR_PROX_SOM:  WORD 0         ; variável para guardar o próximo som a tocar, default é 0
+VAR_COR_PIXEL:  WORD COR_PIXEL ; variável para guardar a cor do pixel, default é vermelho
+VAR_PROX_SOM:   WORD 0         ; variável para guardar o próximo som a tocar, default é 0
 
 VAR_COR_SONDA:  WORD 0FFC0H      ; variável para guardar a cor da sonda, default é amarelo
 VAR_SONDA_POS:  WORD SONDA_BASE + LSONDA_V_OFFSET  ; variável para guardar a posição da sonda da esquerda 
@@ -152,7 +152,7 @@ VAR_AST_TIPO:   WORD 0
                 WORD 0
                 WORD 0
 
-VAR_AST_NUM:  WORD 0  
+VAR_AST_NUM:    WORD 0  
 
 VAR_AST_POS_V:  WORD V_BASE_AST   ; variável para guardar a posição vertical do asteroide 0
                 WORD V_BASE_AST   ; variável para guardar a posição vertical do asteroide 1
@@ -569,10 +569,6 @@ testa_tecla:
     CMP R1, R8
     JZ  pausa
 
-    MOV R8, TEC_4      ; coloca o ID da tecla 0 em R8
-    CMP R1, R8
-    JZ  debug_reset
-
     JMP ha_tecla       ; testa se a tecla permanece premida
 
 testa_start:
@@ -609,89 +605,6 @@ ha_tecla:              ; neste ciclo espera-se até NENHUMA tecla estar premida
     JNZ  ha_tecla      ; se houver uma tecla premida, espera até não haver
     POP R1             ; "limpa" da pilha a linha atual
     JMP  tec_ciclo     ; se não houver, repete-se o ciclo de teste do teclado
-
-inicio_jogo:
-    MOV R1, [VAR_STATUS]     ; coloca a variável de estado do jogo em R1
-    MOV R1, 1                ; coloca o valor 1 em R1, para indicar que o jogo está iniciado
-    MOV [VAR_STATUS], R1     ; atualiza o valor da variável de estado do jogo
-    EI0
-    EI1
-    EI
-    JMP tec_ciclo            ; volta ao ciclo principal do teclado
-
-debug_reset:
-    CALL fim_jogo
-    JMP tec_ciclo            ; volta ao ciclo principal do teclado
-
-fim_jogo:
-    PUSH R0
-    PUSH R1
-    PUSH R2
-    PUSH R3
-    DI
-    MOV R1, [VAR_STATUS]     ; coloca a variável de estado do jogo em R1
-    MOV R1, 0                ; coloca o valor 0 em R1, para indicar que o jogo está terminado
-    MOV [VAR_STATUS], R1     ; atualiza o valor da variável de estado do jogo
-    MOV R0, 0
-    MOV R2, 30               ; DE VAR_SONDA_ON à ultima VAR a ser reiniciada a 0, há 14 WORDS
-    MOV R3, VAR_SONDA_ON
-    ADD R2, R3
-    vars_zero_loop:
-        MOV [R3], R0
-        ADD R3, 2
-        CMP R3, R2
-        JNZ vars_zero_loop
-    MOV R0, V_BASE_AST
-    MOV R2, 12               ; 5 VARS DE ASTEROIDE 
-    MOV R3, VAR_AST_POS_V
-    ADD R2, R3    
-    ast_vpos_loop:
-        MOV [R3], R0
-        ADD R3, 2
-        CMP R3, R2
-        JNZ ast_vpos_loop
-    MOV R0, H_BASE_AST_1
-    MOV [R3], R0               ; R3 aponta para a variavel de posição horizontal do asteroide
-    ADD R3, 2
-    MOV R0, H_BASE_AST_3
-    ADD R2, 6
-    ast_hpos_loop:
-        MOV [R3], R0
-        ADD R3, 2
-        CMP R3, R2
-        JNZ ast_hpos_loop
-    MOV R0, H_BASE_AST_5
-    MOV [R3], R0               ; R3 aponta para a variavel de posição horizontal do asteroide
-    
-    MOV R1, 2
-    CALL reset_ecra
-
-    POP R3
-    POP R2
-    POP R1
-    POP R0
-    EI
-    RET
-
-pausa:
-    PUSH R1
-    MOV R1, 4                    
-    JMP toggle_pausa
-
-resume:
-    PUSH R1
-    MOV R1, 0                    
-    MOV [PAUSA_LOCK], R0
-toggle_pausa:
-    MOV  [SELECIONA_CENARIO], R1 ; seleciona o cenário escolhido (Pausa/jogo)
-    MOV R1, [VAR_STATUS]     ; coloca a variável de estado do jogo em R1
-    SUB R1, 1                ; Se 2, passa para 1, se 1, passa para 0
-    MOV R0, 1                ; "Máscara" para o XOR
-    XOR R1, R0               ; inverte o valor do bit 1, que indica se o jogo está em pausa
-    ADD R1, 1                ; Se 0, passa para 1, se 1, passa para 2
-    MOV [VAR_STATUS], R1     ; atualiza o valor da variável de estado do jogo
-    POP R1
-    JMP ha_tecla             ; volta ao ciclo principal do teclado
 
 dispara_sonda:    ; Ativa a sonda na posição R0
     PUSH R1
@@ -743,6 +656,94 @@ atualiza_energia:
     POP R4
     POP R1
     RET
+
+inicio_jogo:
+    MOV R1, [VAR_STATUS]     ; coloca a variável de estado do jogo em R1
+    MOV R1, 1                ; coloca o valor 1 em R1, para indicar que o jogo está iniciado
+    MOV [VAR_STATUS], R1     ; atualiza o valor da variável de estado do jogo
+    MOV R1, 0                ; coloca o valor 0 em R1, para selecionar o background 0 (gameplay)
+    MOV [SELECIONA_CENARIO], R1 ; atualiza o valor da variável de background
+    MOV R1, 0              
+    MOV [VAR_AST_NUM], R1    ; coloca o valor 3 em VAR_AST_NUM  
+    EI0
+    EI1
+    EI
+    JMP tec_ciclo            ; volta ao ciclo principal do teclado
+
+fim_jogo:
+    DI
+
+    PUSH R0
+    PUSH R1
+    PUSH R2
+    PUSH R3
+    
+    MOV R1, [VAR_STATUS]     ; coloca a variável de estado do jogo em R1
+    MOV R1, 0                ; coloca o valor 0 em R1, para indicar que o jogo está terminado
+    MOV [VAR_STATUS], R1     ; atualiza o valor da variável de estado do jogo
+    MOV R0, 0
+    MOV R2, 30               ; DE VAR_SONDA_ON à ultima VAR a ser reiniciada a 0, há 14 WORDS
+    MOV R3, VAR_SONDA_ON
+    ADD R2, R3
+    vars_zero_loop:
+        MOV [R3], R0
+        ADD R3, 2
+        CMP R3, R2
+        JNZ vars_zero_loop
+    MOV R0, V_BASE_AST
+    MOV R2, 12               ; 5 VARS DE ASTEROIDE 
+    MOV R3, VAR_AST_POS_V
+    ADD R2, R3    
+    ast_vpos_loop:
+        MOV [R3], R0
+        ADD R3, 2
+        CMP R3, R2
+        JNZ ast_vpos_loop
+    MOV R0, H_BASE_AST_1
+    MOV [R3], R0               ; R3 aponta para a variavel de posição horizontal do asteroide
+    ADD R3, 2
+    MOV R0, H_BASE_AST_3
+    ADD R2, 6
+    ast_hpos_loop:
+        MOV [R3], R0
+        ADD R3, 2
+        CMP R3, R2
+        JNZ ast_hpos_loop
+    MOV R0, H_BASE_AST_5
+    MOV [R3], R0               ; R3 aponta para a variavel de posição horizontal do asteroide
+    
+    MOV R1, 2
+    CALL reset_ecra
+
+    MOV R1, 0
+    MOV [VAR_AST_NUM], R1    ; coloca o valor 3 em VAR_AST_NUM
+
+    POP R3
+    POP R2
+    POP R1
+    POP R0
+
+    RET
+
+pausa:
+    PUSH R1
+    MOV R1, 4                    
+    JMP toggle_pausa
+
+resume:
+    PUSH R1
+    MOV R1, 0                    
+    MOV [PAUSA_LOCK], R0
+toggle_pausa:
+    MOV  [SELECIONA_CENARIO], R1 ; seleciona o cenário escolhido (Pausa/jogo)
+    MOV R1, [VAR_STATUS]     ; coloca a variável de estado do jogo em R1
+    SUB R1, 1                ; Se 2, passa para 1, se 1, passa para 0
+    MOV R0, 1                ; "Máscara" para o XOR
+    XOR R1, R0               ; inverte o valor do bit 1, que indica se o jogo está em pausa
+    ADD R1, 1                ; Se 0, passa para 1, se 1, passa para 2
+    MOV [VAR_STATUS], R1     ; atualiza o valor da variável de estado do jogo
+    POP R1
+    JMP ha_tecla             ; volta ao ciclo principal do teclado
 
 ; *********************************************************************************
 ; Processo - Nave
@@ -1120,19 +1121,13 @@ asteroide_reset:
     CMP R9, R5              ; se o limite for o limite para asteróides inócuos, desligar o asteroide
     JZ  asteroide_off       ; salta para o código que desliga o asteroide
     
-    ;MOV R6, R10             ; !!!!Solução atamancada!!!
-    ;POP R10                 ; recupera o valor de R11 para R10 (OFFSET DE MEMÓRIA)
-    ;PUSH R6                 ; guarda o valor de R10 antigo (POSIÇÃO)
-    ;SUB R10, 1              ; decrementa o offset de memória
-    ;SHL R10, 1              ; multiplica o offset de memória por 2
-
-
-    ;JMP asteroide_fim      ; salta para o código que acaba o jogo por colisão
-    ;R10 e R11 possívelmente trocados neste ponto. Irrelevante,no fim de jogo o erro não é visível
     JMP asteroide_fim       ; salta para o código que desliga o asteroide
 
 asteroide_spawn:  
     YIELD    
+    MOV R4, [VAR_STATUS]    ;
+    CMP R4, 0               ; se o jogo estiver acabado
+    JZ asteroides        ; salta para o código que desliga o asteroide
 
     MOV R4, [VAR_AST_NUM]   ; coloca o número de asteroides ativos em R4
     CMP R4, 4               ; se o número de asteroides ativos for 4
@@ -1197,7 +1192,7 @@ asteroide_fim:              ; NOT FUCKING WORKING
     POP R10                 ; recupera o valor de R10
     MOV R5, 0
     MOV [VAR_STATUS], R5
-    
+
     CALL fim_jogo
 
     JMP asteroides 
