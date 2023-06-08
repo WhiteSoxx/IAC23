@@ -124,10 +124,6 @@ SP_display:
     STACK 20H
 SP_energia:
 
-imagem_hexa:
-	BYTE	00H			; imagem em memória dos displays hexadecimais 
-						; (inicializada a zero, mas podia ser outro valor qualquer).
-
 VAR_LINHA:      WORD 0            ; variável para guardar a linha atual
 VAR_COLUNA:     WORD 0            ; variável para guardar a coluna atual
 VAR_TECCOUNT:   WORD -1         ; variável para guardar o contador para conversão de teclas
@@ -664,13 +660,12 @@ atualiza_energia:
     PUSH R1
     PUSH R4
     MOV R1, [VAR_ENERGIA] ; coloca o valor da energia em R1
-    CMP R1, 0             ; se a energia for 0
-    JNZ atualiza_dec      ; salta para o código do fim do jogo
-    CALL fim_jogo         ; chama a função do fim do jogo
-    JMP fim_atualiza      ; salta para o fim da função
-atualiza_dec:
     SUB R1, R10           ; decrementa a energia no valor dado por R10
     MOV [VAR_ENERGIA], R1 ; atualiza o valor da energia
+    CMP R1, 0             ; se a energia for superior a 0
+    JGT fim_atualiza      ; termina a atualização, caso contrário:
+    MOV R10, 3            ; coloca o valor 3 em R10 para selecionar o ecrã 3 (fim do jogo por energia)
+    CALL fim_jogo         ; chama a função do fim do jogo
 fim_atualiza:
     POP R4
     POP R1
@@ -695,7 +690,7 @@ inicio_jogo:
     EI
     JMP tec_ciclo            ; volta ao ciclo principal do teclado
 
-fim_jogo:
+fim_jogo:                    ; r10 escolhe o bg
     DI
 
     PUSH R0
@@ -737,7 +732,7 @@ fim_jogo:
     MOV R0, H_BASE_AST_5
     MOV [R3], R0               ; R3 aponta para a variavel de posição horizontal do asteroide
     
-    MOV R1, 2
+    MOV R1, R10
     CALL reset_ecra
 
     MOV R1, 0
@@ -1198,11 +1193,13 @@ asteroide_off:              ; desliga o asteroide
 
 asteroide_fim:              ; NOT FUCKING WORKING
     POP R11                 ; recupera o valor de R11
-    POP R10                 ; recupera o valor de R10
     MOV R5, 0
     MOV [VAR_STATUS], R5
 
+    MOV R10, 2
     CALL fim_jogo
+
+    POP R10                 ; recupera o valor de R10
 
     JMP asteroides 
 aguarda_inicio_a:
@@ -1238,9 +1235,9 @@ aguarda_inicio_e:
     JNZ aguarda_inicio_e
 
 energia_loop:
-    MOV R0, [ENERGIA_LOCK]
     MOV R10, DEC_ENERGIA_TEMPO
     CALL atualiza_energia
+        MOV R0, [ENERGIA_LOCK]
     MOV R0, [VAR_STATUS]
     CMP R0, 1
     JNZ aguarda_inicio_e
