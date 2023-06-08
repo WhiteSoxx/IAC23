@@ -567,7 +567,7 @@ testa_tecla:
 
     MOV R8, TEC_0      ; coloca o ID da tecla 0 em R8
     CMP R1, R8
-    JZ  toggle_pausa
+    JZ  pausa
 
     MOV R8, TEC_4      ; coloca o ID da tecla 0 em R8
     CMP R1, R8
@@ -673,15 +673,24 @@ fim_jogo:
     EI
     RET
 
-resume: 
+pausa:
+    PUSH R1
+    MOV R1, 4                    
+    JMP toggle_pausa
+
+resume:
+    PUSH R1
+    MOV R1, 0                    
     MOV [PAUSA_LOCK], R0
 toggle_pausa:
+    MOV  [SELECIONA_CENARIO], R1 ; seleciona o cenário escolhido (Pausa/jogo)
     MOV R1, [VAR_STATUS]     ; coloca a variável de estado do jogo em R1
     SUB R1, 1                ; Se 2, passa para 1, se 1, passa para 0
     MOV R0, 1                ; "Máscara" para o XOR
     XOR R1, R0               ; inverte o valor do bit 1, que indica se o jogo está em pausa
     ADD R1, 1                ; Se 0, passa para 1, se 1, passa para 2
     MOV [VAR_STATUS], R1     ; atualiza o valor da variável de estado do jogo
+    POP R1
     JMP ha_tecla             ; volta ao ciclo principal do teclado
 
 dispara_sonda:    ; Ativa a sonda na posição R0
