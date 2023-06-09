@@ -61,8 +61,8 @@ MEMORIA_ECRA	EQU	8000H		; endereço de base da memória do ecrã
 N_LINHAS        EQU  32        ; número de linhas do ecrã (altura)
 N_COLUNAS       EQU  64        ; número de colunas do ecrã (largura)
 
-COR_PIXEL       EQU 0FF00H     ; cor do pixel: vermelho em ARGB (opaco e vermelho no máximo, verde e azul a 0)
 
+AMARELO         EQU 0F0FFH     ; cor do pixel: amarelo em ARGB (opaco e vermelho no máximo, verde e azul a 0)
 LARGURA_AST		EQU	5			; largura do asteroide
 CAST_ESC		EQU	0F442H		; cor do pixel: contorno do asteroide em ARGB 
 CAST_CLR		EQU	0F985H		; cor do pixel: preenchimento do asteroide em ARGB
@@ -130,7 +130,7 @@ VAR_TECCOUNT:   WORD -1        ; variável para guardar o contador para convers�
 
 VAR_ENERGIA:    WORD 0         ; variável para guardar a energia (ver constante ENERGIA_BASE)
 
-VAR_COR_PIXEL:  WORD COR_PIXEL ; variável para guardar a cor do pixel, default é vermelho
+VAR_COR_PIXEL:  WORD AMARELO ; variável para guardar a cor do pixel, default é amarelo
 VAR_PROX_SOM:   WORD 0         ; variável para guardar o próximo som a tocar, default é 0
 
 VAR_COR_SONDA:  WORD 0FFC0H    ; variável para guardar a cor da sonda, default é amarelo
@@ -199,6 +199,22 @@ DEF_CLEAR_AST:				; tabela que define o asteroide (cor, largura, pixels)
     WORD		0, 0, 0, 0, 0		;
     WORD		0, 0, 0, 0, 0		;
     WORD		0, 0, 0, 0, 0		;
+
+DEF_AST_BOOM:
+    WORD		LARGURA_AST
+    WORD        LARGURA_AST
+    WORD		AMARELO, 0, 0, 0, AMARELO		;
+    WORD		0, AMARELO, 0, AMARELO, 0		;
+    WORD		0,    0, AMARELO, 0,    0		;
+    WORD		0, AMARELO, 0, AMARELO, 0		;
+    WORD		AMARELO, 0, 0, 0, AMARELO		;
+    WORD		LARGURA_AST
+    WORD        LARGURA_AST
+    WORD		ROXO, 0, 0, 0, ROXO		;
+    WORD		0, ROXO, 0, ROXO, 0		;
+    WORD		0,  0, ROXO, 0,   0		;
+    WORD		0, ROXO, 0, ROXO, 0		;
+    WORD		ROXO, 0, 0, 0, ROXO		;
 
 DEF_NAVE: 
     WORD LARGURA_NAVE
@@ -1057,6 +1073,10 @@ asteroide_meio:
     MOV R0, 0               ; coloca o offset horizontal do asteroide do meio em R0
     JMP asteroides          ; salta para o código que move o asteroide
 
+aguarda_inicio_a:
+    YIELD
+    JMP asteroides
+
 asteroides:
     MOV R5, [VAR_STATUS]
     CMP R5, 0
@@ -1064,8 +1084,6 @@ asteroides:
     EI0
     EI1
     EI
-
-    JMP asteroide_check
 
 asteroide_check:
     CALL pausa_check        ; verifica se o jogo está em pausa
@@ -1114,7 +1132,7 @@ asteroide_on:            ; código que move o asteroide
     MOV R4, VAR_AST_ON
     MOV R4, [R5+R4]         ; coloca o estado do asteroide em R5
     CMP R4, 0
-    JZ asteroide_off      ; se o asteroide estiver desligado, salta para o código que desliga graficamente o asteroide
+    JZ asteroide_boom      ; se o asteroide estiver desligado, salta para o código que desliga graficamente o asteroide
 
     POP R11                 ; recupera o valor de R10
     POP R10                 ; recupera o valor de R11
@@ -1171,7 +1189,30 @@ fim_spawn:
 
     JMP asteroide_on        ; começa a mover o asteroide
 
+salta_anim:
+    POP R0
+    JMP asteroide_off       ; salta para o código que desliga o asteroide
 
+asteroide_boom:
+    PUSH R0
+    MOV R0, [VAR_STATUS]
+    CMP R0, 0               ; se o jogo estiver acabado
+    JZ salta_anim           ; se o jogo estiver acabado ignora a animação
+    MOV R6, VAR_AST_TIPO
+    MOV R6, [R6+R5]         ; coloca o tipo do asteroide em R6
+    
+    MOV R0, R6     ; coloca o som a tocar
+    ADD R0, 3       ; adiciona 3 ao valor do som a tocar, resulta em 3/4 (som de explosão diferente consoante minerável)
+    CALL toca_som  ; toca o som
+   
+    MOV R0, 54
+    MOV R4, DEF_AST_BOOM
+    MUL R6, R0             ; multiplica o tipo do asteroide por 52, tamanho da definição de asteroide
+    POP R0
+    ADD R4, R6              
+    CALL desenha_asteroide  ; desenha o asteroide
+    MOV R6, [AST_LOCK]
+ 
 asteroide_off:              ; desliga o asteroide
     MOV R4, DEF_CLEAR_AST  
     CALL desenha_asteroide  ; apaga o asteroide
@@ -1205,9 +1246,7 @@ asteroide_fim:              ; NOT FUCKING WORKING
     POP R10                 ; recupera o valor de R10
 
     JMP asteroides 
-aguarda_inicio_a:
-    YIELD
-    JMP asteroides
+
 ; *********************************************************************************
 ;  Processo - Display
 ; *********************************************************************************
