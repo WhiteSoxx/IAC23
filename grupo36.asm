@@ -186,7 +186,7 @@ VAR_STATUS: WORD 0        ; variável para guardar o estado do jogo (0 - jogo n�
 TAB_AST:
     WORD 3, 1, COLISAO_ASTEROIDE
     WORD 32, -1, LIM_ASTEROIDE
-    WORD 32, COLISAO_MID_ASTEROIDE
+    WORD 32, 0, COLISAO_MID_ASTEROIDE
     WORD 32, 1, LIM_ASTEROIDE
     WORD 61, -1, COLISAO_ASTEROIDE
 
@@ -1049,18 +1049,10 @@ fim_verifica_colisao:
     POP R0
     RET
 
-verifica_colisao_meio:
-    MOV R0, [R0+R10]        ; coloca a posição vertical do asteroide a verificar em R0
-    ADD R0, 3               ; TEMPOORARIOcoloca em R0 a posição fa fronteira
-    CMP R0, R1              ; se a posição vertical da sonda for maior que a posição vertical do asteroide
-    JZ efetua_colisao       ; salta para o código de colisão
-
-
 efetua_colisao:
     PUSH R0
     PUSH R1
     MOV R0, 0
-    MOV R1, 25
     MOV [R4], R0            ; desliga o asteroide
     
     MOV R8, [R5]
@@ -1134,7 +1126,7 @@ asteroide_on:            ; código que move o asteroide
     MOV R5, R10             ; Usa R5 como offset para a memória temporáriamente, já qur R10 é uma coordenada
 
     MOV R4, [R2+R10]        ; coloca a posição horizontal do asteroide em R4
-    ADD R4, R0              ; adiciona o offset horizontal do asteroide
+    ADD R4, R8              ; adiciona o offset horizontal do asteroide
     MOV [R2+R10], R4        ; atualiza a posição horizontal do asteroide
     MOV R11, R4             ; coloca a posição horizontal do asteroide em R11
 
@@ -1143,22 +1135,19 @@ asteroide_on:            ; código que move o asteroide
     MOV [R1+R10], R4        ; atualiza a posição vertical do asteroide
     MOV R10, R4             ; coloca a posição vertical do asteroide em R10
    
-    PUSH R4                 ; guarda o valor de R4
-
     MOV R4, DEF_CLEAR_AST
-    SUB R11, R0             ; Subs servem para apagar o asteroide na posição anterior
+    SUB R11, R8            ; Subs servem para apagar o asteroide na posição anterior
     SUB R10, 1
     CALL desenha_asteroide
 
-    ADD R11, R0
+    ADD R11, R8
     ADD R10, 1
     MOV R4, DEF_ASTEROIDE   ; coloca o endereço do desenho do asteroide em R4
     ADD R4, R6              ; adiciona o offset vertical de memoória ao endreço
     CALL desenha_asteroide  ; desenha o asteroide
     
-    POP R4                  ; recupera o valor de R4 para verificar a pos. vertical
 
-    CMP R4, R9              ; se o asteroide tiver excedido um limite
+    CMP R10, R9              ; se o asteroide tiver excedido um limite
     JZ asteroide_reset      ; salta para o código que reinicia o asteroide
 
     MOV R4, VAR_AST_ON
@@ -1204,7 +1193,7 @@ asteroide_spawn:
     MOV R6, [R5]            ; coloca o valor da coluna em R6
     MOV [R2+R10], R6        ; coloca o valor da coluna no respetivo asteroide
     ADD R5, 2
-    MOV R0, [R5]            ; coloca o valor da direção no registo
+    MOV R8, [R5]            ; coloca o valor da direção no registo
     ADD R5, 2
     MOV R9, [R5]            ; coloca o valor do limite no registo
 
