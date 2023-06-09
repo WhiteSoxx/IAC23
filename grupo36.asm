@@ -720,6 +720,7 @@ inicio_jogo:
     MOV [VAR_AST_NUM], R1    ; coloca o valor 3 em VAR_AST_NUM  
     PUSH R0 
     MOV R0, 5
+    CALL toca_som            ; chama a função do som
     POP R0
     MOV R1, ENERGIA_BASE
     MOV [VAR_ENERGIA], R1    ; coloca o valor 100 em VAR_ENERGIA
@@ -1305,7 +1306,7 @@ asteroide_fim:              ; NOT FUCKING WORKING
     MOV R5, 0
     MOV [VAR_STATUS], R5
 
-    MOV R0, 7             ; coloca o valor 6 em R0 para selecionar o som 6 (fim do jogo por energia)
+    MOV R0, 7             ; coloca o valor 6 em R0 para selecionar o som 6 (fim do jogo por colisao)
     MOV R10, 2
     CALL fim_jogo
 
