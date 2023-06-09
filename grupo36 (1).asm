@@ -84,8 +84,9 @@ LSONDA_V_OFFSET EQU 3           ; Offset da posição vertical inicial da sonda 
 LSONDA_H_OFFSET EQU 10            ; Offset da posição horizontal inicial da sonda lateral
 
 ENERGIA_BASE EQU 00064H   ; energia inicial
-DEC_ENERGIA_SONDA  EQU 5 ; decremento da energia por sonda lançada
-DEC_ENERGIA_TEMPO  EQU 3 ; decremento da energia por cada ciclo do relógio "energia"
+DEC_ENERGIA_SONDA  EQU 5  ; decremento da energia por sonda lançada
+DEC_ENERGIA_TEMPO  EQU 3  ; decremento da energia por cada ciclo do relógio "energia"
+INC_ENERGIA        EQU 25 ; incremento da energia por cada asteroide mineravel destruido
 
 NAVE_X       EQU  26
 NAVE_Y       EQU  22
@@ -118,20 +119,18 @@ SP_nave:         ; Stack pointer do programa da nave
 SP_sonda:        ; Stack pointer do programa da sonda
     STACK TAMANHO_PILHA * 5          ; espaço reservado para a pilha (200H bytes, ou 100H words)
 SP_asteroides:   ; Stack pointer do programa dos asteroides
-    STACK TAMANHO_PILHA              ; espaço reservado para a pilha (200H bytes, ou 100H words)
-SP_energia:      ; Stack pointer do programa da energia
+    STACK 20H
+SP_display:
+    STACK 20H
+SP_energia:
 
-imagem_hexa:
-	BYTE	00H			; imagem em memória dos displays hexadecimais 
-						; (inicializada a zero, mas podia ser outro valor qualquer).
+VAR_LINHA:      WORD 0            ; variável para guardar a linha atual
+VAR_COLUNA:     WORD 0            ; variável para guardar a coluna atual
+VAR_TECCOUNT:   WORD -1         ; variável para guardar o contador para conversão de teclas
+VAR_ENERGIA:    WORD ENERGIA_BASE; variável para guardar a energia (ver constante ENERGIA_BASE)
 
-VAR_LINHA:  WORD 0            ; variável para guardar a linha atual
-VAR_COLUNA: WORD 0            ; variável para guardar a coluna atual
-VAR_TECCOUNT: WORD -1         ; variável para guardar o contador para conversão de teclas
-VAR_ENERGIA: WORD ENERGIA_BASE; variável para guardar a energia (ver constante ENERGIA_BASE)
-
-VAR_COR_PIXEL: WORD COR_PIXEL ; variável para guardar a cor do pixel, default é vermelho
-VAR_PROX_SOM:  WORD 0         ; variável para guardar o próximo som a tocar, default é 0
+VAR_COR_PIXEL:  WORD COR_PIXEL ; variável para guardar a cor do pixel, default é vermelho
+VAR_PROX_SOM:   WORD 0         ; variável para guardar o próximo som a tocar, default é 0
 
 VAR_COR_SONDA:  WORD 0FFC0H      ; variável para guardar a cor da sonda, default é amarelo
 VAR_SONDA_POS:  WORD SONDA_BASE + LSONDA_V_OFFSET  ; variável para guardar a posição da sonda da esquerda 
@@ -154,7 +153,7 @@ VAR_AST_TIPO:   WORD 0
                 WORD 0
                 WORD 0
 
-VAR_AST_NUM:  WORD 0  
+VAR_AST_NUM:    WORD 0  
 
 VAR_AST_POS_V:  WORD V_BASE_AST   ; variável para guardar a posição vertical do asteroide 0
                 WORD V_BASE_AST   ; variável para guardar a posição vertical do asteroide 1
@@ -180,7 +179,7 @@ DEF_ASTEROIDE:					; tabela que define o asteroide (cor, largura, pixels)
 	WORD		CAST_ESC, CAST_CLR, CAST_CLR, CAST_CLR, CAST_ESC	;
     WORD		CAST_ESC, CAST_CLR, CAST_CLR, CAST_CLR, CAST_ESC	;
     WORD		CAST_ESC, CAST_CLR, CAST_CLR, CAST_CLR, CAST_ESC    ;
-    WORD	    CAST_ESC, CAST_ESC, CAST_ESC, CAST_ESC, CAST_ESC    ;
+    WORD	    0, CAST_ESC, CAST_ESC, CAST_ESC, 0   ;
 
 DEF_AST_NRG:					; tabela que define o asteroide (cor, largura, pixels)
 	WORD		LARGURA_AST     ; [DEF_AST + 0] largura do asteroide 1228
@@ -189,7 +188,7 @@ DEF_AST_NRG:					; tabela que define o asteroide (cor, largura, pixels)
 	WORD		CAST_ESC, ROXO, CAST_CLR, ROXO, CAST_ESC	;
     WORD		CAST_ESC, CAST_CLR, ROXO, CAST_CLR, CAST_ESC	;
     WORD		CAST_ESC, ROXO, CAST_CLR, ROXO, CAST_ESC    ;
-    WORD	    CAST_ESC, CAST_ESC, CAST_ESC, CAST_ESC, CAST_ESC    ;
+    WORD	    0, CAST_ESC, CAST_ESC, CAST_ESC, 0   ;
 
 DEF_CLEAR_AST:				; tabela que define o asteroide (cor, largura, pixels)
     WORD		LARGURA_AST
@@ -219,11 +218,10 @@ DEF_NAVE:
 ; ******************************************************************************
 AST_LOCK:    LOCK 0
 SONDA_LOCK:  LOCK 0
-ENERGIA_LOCK: LOCK 0
 NAVE_LOCK:   LOCK 0
 START_LOCK:  LOCK 0
 PAUSA_LOCK:  LOCK 0
-
+ENERGIA_LOCK:LOCK 0
 ; ******************************************************************************
 ; * Tabela de interrupções
 ; ******************************************************************************
@@ -247,18 +245,11 @@ inicio:		                  ; inicializações
     MOV R1, 1                
     CALL reset_ecra           ; limpa o ecrã e desenha splash screen
     
-    MOV  R1, 0
-    MOV  R4, DISPLAYS         ; endereço do periférico dos displays
-    MOV  [R4], R1             ; inicializa o valor do display da energia
-
     CALL teclado              ; inicia o processo do teclado
     CALL nave                 ; inicia o processo da nave
+    CALL display              ; inicia o processo do display
 
 	MOV	R11, -2		          ; número de sondas a criar é 3 (-1, 0, 1)
-
-loop_energia:
-    CALL    energia           ;
-    JMP     loop_energia      ;
 
 loop_sondas:
 	ADD	R11, 1			      ; próxima sonda
@@ -285,20 +276,6 @@ reset_ecra:
     MOV  [APAGA_ECRÃ], R1	  ; apaga todos os pixels já desenhados (o valor de R1 não é relevante)
     MOV  [SELECIONA_CENARIO], R1 ; seleciona o cenário 1 (Splash Screen)
     RET
-
-sum_display:                  ; TEMP!
-
-    MOV R10, [VAR_ENERGIA]    ; coloca o valor da energia em R10
-    ADD R10, R0               ; altera o valor da energia
-    MOV [VAR_ENERGIA], R10    ; atualiza o valor da energia
-
-    CALL hex_para_dec         ; Altera o valor em R10 para "decimal"
-
-    MOV [R4], R10             ; atualiza o valor do display
-
-    POP R0                    ; foi dado push antes do salto, R9 é o incremento/decremento
-
-    JMP ha_tecla              ; ação efetuada, não testar teclado novamente
 
 pausa_check:
     PUSH R0
@@ -361,6 +338,8 @@ desenha_nave:
     PUSH R0
     PUSH R1
     PUSH R4
+    PUSH R5
+    PUSH R6
     PUSH R10
     PUSH R11
     MOV R10, NAVE_Y  ; coloca a posição vertical do canto do sprite da nave em R10
@@ -369,6 +348,8 @@ desenha_nave:
     CALL desenha_sprite 
     POP R11
     POP R10
+    POP R6
+    POP R5
     POP R4
     POP R1
     POP R0
@@ -490,12 +471,6 @@ toca_som:
 
     RET
 
-int_energia:
-    PUSH R0
-    MOV R0, 0
-    MOV [ENERGIA_LOCK], R0      ; desbloqueia o processo da energia
-    POP R0
-    RFE 
 int_sonda:
     PUSH R0
     MOV R0, 0
@@ -506,6 +481,12 @@ int_ast:
     PUSH R0
     MOV R0, 0
     MOV [AST_LOCK], R0        ; desbloqueia o processo da sonda
+    POP R0
+    RFE 
+int_energia:
+    PUSH R0
+    MOV R0, 0
+    MOV [ENERGIA_LOCK], R0    ; desbloqueia o processo da sonda
     POP R0
     RFE 
 
@@ -581,11 +562,7 @@ testa_tecla:
 
     MOV R8, TEC_0      ; coloca o ID da tecla 0 em R8
     CMP R1, R8
-    JZ  toggle_pausa
-
-    MOV R8, TEC_4      ; coloca o ID da tecla 0 em R8
-    CMP R1, R8
-    JZ  debug_reset
+    JZ  pausa
 
     JMP ha_tecla       ; testa se a tecla permanece premida
 
@@ -624,78 +601,24 @@ ha_tecla:              ; neste ciclo espera-se até NENHUMA tecla estar premida
     POP R1             ; "limpa" da pilha a linha atual
     JMP  tec_ciclo     ; se não houver, repete-se o ciclo de teste do teclado
 
-inicio_jogo:
-    MOV R1, [VAR_STATUS]     ; coloca a variável de estado do jogo em R1
-    MOV R1, 1                ; coloca o valor 1 em R1, para indicar que o jogo está iniciado
-    MOV [VAR_STATUS], R1     ; atualiza o valor da variável de estado do jogo
-    EI0
-    EI1
-    EI
-    JMP tec_ciclo            ; volta ao ciclo principal do teclado
-
-debug_reset:
-    CALL fim_jogo
-    JMP tec_ciclo            ; volta ao ciclo principal do teclado
-
-fim_jogo:
-    PUSH R0
+pausa:
     PUSH R1
-    PUSH R2
-    PUSH R3
-    DI
-    MOV R1, [VAR_STATUS]     ; coloca a variável de estado do jogo em R1
-    MOV R1, 0                ; coloca o valor 0 em R1, para indicar que o jogo está terminado
-    MOV [VAR_STATUS], R1     ; atualiza o valor da variável de estado do jogo
-    MOV R0, 0
-    MOV R2, 30               ; DE VAR_SONDA_ON à ultima VAR a ser reiniciada a 0, há 14 WORDS
-    MOV R3, VAR_SONDA_ON
-    ADD R2, R3
-    vars_zero_loop:
-        MOV [R3], R0
-        ADD R3, 2
-        CMP R3, R2
-        JNZ vars_zero_loop
-    MOV R0, V_BASE_AST
-    MOV R2, 12               ; 5 VARS DE ASTEROIDE 
-    MOV R3, VAR_AST_POS_V
-    ADD R2, R3    
-    ast_vpos_loop:
-        MOV [R3], R0
-        ADD R3, 2
-        CMP R3, R2
-        JNZ ast_vpos_loop
-    MOV R0, H_BASE_AST_1
-    MOV [R3], R0               ; R3 aponta para a variavel de posição horizontal do asteroide
-    ADD R3, 2
-    MOV R0, H_BASE_AST_3
-    ADD R2, 6
-    ast_hpos_loop:
-        MOV [R3], R0
-        ADD R3, 2
-        CMP R3, R2
-        JNZ ast_hpos_loop
-    MOV R0, H_BASE_AST_5
-    MOV [R3], R0               ; R3 aponta para a variavel de posição horizontal do asteroide
-    
-    MOV R1, 2
-    CALL reset_ecra
+    MOV R1, 4                    
+    JMP toggle_pausa
 
-    POP R3
-    POP R2
-    POP R1
-    POP R0
-    EI
-    RET
-
-resume: 
+resume:
+    PUSH R1
+    MOV R1, 0                    
     MOV [PAUSA_LOCK], R0
 toggle_pausa:
+    MOV  [SELECIONA_CENARIO], R1 ; seleciona o cenário escolhido (Pausa/jogo)
     MOV R1, [VAR_STATUS]     ; coloca a variável de estado do jogo em R1
     SUB R1, 1                ; Se 2, passa para 1, se 1, passa para 0
     MOV R0, 1                ; "Máscara" para o XOR
     XOR R1, R0               ; inverte o valor do bit 1, que indica se o jogo está em pausa
     ADD R1, 1                ; Se 0, passa para 1, se 1, passa para 2
     MOV [VAR_STATUS], R1     ; atualiza o valor da variável de estado do jogo
+    POP R1
     JMP ha_tecla             ; volta ao ciclo principal do teclado
 
 dispara_sonda:    ; Ativa a sonda na posição R0
@@ -737,16 +660,91 @@ atualiza_energia:
     PUSH R1
     PUSH R4
     MOV R1, [VAR_ENERGIA] ; coloca o valor da energia em R1
-    CMP R1, 0             ; se a energia for 0
-    JNZ fim_jogo          ; salta para o código do fim do jogo
     SUB R1, R10           ; decrementa a energia no valor dado por R10
     MOV [VAR_ENERGIA], R1 ; atualiza o valor da energia
-    MOV R10, R1           ; Passa o valor da energia para R10
-    CALL hex_para_dec     ; converte o valor da energia para decimal
-    MOV R4, DISPLAYS      ; endereço do periférico dos displays
-    MOV [R4], R10         ; atualiza o valor do display da energia
+    CMP R1, 0             ; se a energia for superior a 0
+    JGT fim_atualiza      ; termina a atualização, caso contrário:
+    MOV R10, 3            ; coloca o valor 3 em R10 para selecionar o ecrã 3 (fim do jogo por energia)
+    CALL fim_jogo         ; chama a função do fim do jogo
+fim_atualiza:
     POP R4
     POP R1
+    RET
+
+inicio_jogo:
+    MOV R1, [VAR_STATUS]     ; coloca a variável de estado do jogo em R1
+    MOV R1, 1                ; coloca o valor 1 em R1, para indicar que o jogo está iniciado
+    MOV [VAR_STATUS], R1     ; atualiza o valor da variável de estado do jogo
+    MOV R1, 0                ; coloca o valor 0 em R1, para selecionar o background 0 (gameplay)
+    MOV [SELECIONA_CENARIO], R1 ; atualiza o valor da variável de background
+    MOV R1, 0              
+    MOV [VAR_AST_NUM], R1    ; coloca o valor 3 em VAR_AST_NUM  
+
+    MOV R1, ENERGIA_BASE
+    MOV [VAR_ENERGIA], R1    ; coloca o valor 100 em VAR_ENERGIA
+
+    CALL desenha_nave        ; desenha a nave  
+    CALL energia              ; inicia o processo da energia
+    
+    EI0
+    EI1
+    EI2
+    EI
+    JMP tec_ciclo            ; volta ao ciclo principal do teclado
+
+fim_jogo:                    ; r10 escolhe o bg
+    DI
+
+    PUSH R0
+    PUSH R1
+    PUSH R2
+    PUSH R3
+    
+    MOV R1, 0                ; coloca o valor 0 em R1, para indicar que o jogo está terminado
+    MOV [VAR_STATUS], R1     ; atualiza o valor da variável de estado do jogo
+    MOV R0, 0
+    MOV R2, 30               ; DE VAR_SONDA_ON à ultima VAR a ser reiniciada a 0, há 14 WORDS
+    MOV R3, VAR_SONDA_ON
+    ADD R2, R3
+    vars_zero_loop:
+        MOV [R3], R0
+        ADD R3, 2
+        CMP R3, R2
+        JNZ vars_zero_loop
+    MOV R0, V_BASE_AST
+    MOV R2, 12               ; 5 VARS DE ASTEROIDE 
+    MOV R3, VAR_AST_POS_V
+    ADD R2, R3    
+    ast_vpos_loop:
+        MOV [R3], R0
+        ADD R3, 2
+        CMP R3, R2
+        JNZ ast_vpos_loop
+    MOV R0, H_BASE_AST_1
+    MOV [R3], R0               ; R3 aponta para a variavel de posição horizontal do asteroide
+    ADD R3, 2
+    MOV R0, H_BASE_AST_3
+    ADD R2, 6
+    ast_hpos_loop:
+        MOV [R3], R0
+        ADD R3, 2
+        CMP R3, R2
+        JNZ ast_hpos_loop
+    MOV R0, H_BASE_AST_5
+    MOV [R3], R0               ; R3 aponta para a variavel de posição horizontal do asteroide
+    
+    MOV R1, R10
+    CALL reset_ecra
+
+    MOV R1, 0
+    MOV [VAR_AST_NUM], R1    ; coloca o valor 0 em VAR_AST_NUM
+    MOV [VAR_ENERGIA], R1    ; coloca o valor 0 em VAR_ENERGIA
+    
+    POP R3
+    POP R2
+    POP R1
+    POP R0
+
     RET
 
 ; *********************************************************************************
@@ -767,14 +765,6 @@ nave:
     
     
     CALL desenha_nave
-    
-    MOV  R4, DISPLAYS  ; endereço do periférico dos displays
-    MOV  R10, ENERGIA_BASE   ; inicializa a energia
-    MOV  [VAR_ENERGIA], R10  ; inicializa a energia
-    CALL hex_para_dec        ; converte o valor da energia para decimal
-    MOV  [R4], R10           ; inicializa o valor do display da energia
-
-    MOV  R4, DISPLAYS        ; endereço do periférico dos displays
 
     MOV  R10, [NAVE_LOCK] ; bloqueia o update da nave
 aguarda_inicio_n:
@@ -784,22 +774,6 @@ aguarda_inicio_n:
 atualiza_nave_loop:
     YIELD
     JMP atualiza_nave_loop
-
-; *********************************************************************************
-; Processo - Energia
-; *********************************************************************************
-
-PROCESS SP_energia
-
-energia:
-    
-    SUB R1, 3             ;
-    MOV [VAR_ENERGIA], R1 ; atualiza o valor da energia
-    MOV [R4], R1          ; atualiza o valor do display da energia
-    CMP R1, 0             ;
-    JZ  fim_jogo          ;
-
-
 
 ; *********************************************************************************
 ; Processo - Sondas
@@ -927,13 +901,13 @@ verifica_colisao:
     PUSH R5
     PUSH R6
     PUSH R7
+    PUSH R8
     PUSH R10
     PUSH R11
 
     CALL sonda_offset       ; coloca em R2 a posição horizontal da sonda do meio
     MOV R7, R10             ; R7 retem o offset original da instancia da sonda
-    ;CMP R10, 2              ; A sonda do meio ocupa a segunda posição na tabela de dados das sondas
-    ;JZ verifica_colisao_meio; Caso especial para verificar apenas a distância vertical ao asteroide 3, do meio 
+
     MOV R11, R10
     ADD R11, 6               ; R11 é o valor imediatamente acima do offset maximo do asteroide a verificar
                             ; Existe aqui uma ineficiência. As sondas laterais verificam ambas o asteróide do meio, por
@@ -978,6 +952,8 @@ fim_loop_colisao:
 fim_verifica_colisao:
     POP R11
     POP R10
+
+    POP R8
     POP R7
     POP R6
     POP R5
@@ -1001,7 +977,17 @@ efetua_colisao:
     MOV R0, 0
     MOV R1, 25
     MOV [R4], R0            ; desliga o asteroide
-
+    
+    MOV R8, [R5]
+    CMP R8, 1               ; se o asteroide for mineravel
+    JNZ fim_efetua_colisão
+    PUSH R9
+    MOV R8, [VAR_ENERGIA]
+    MOV R9, INC_ENERGIA
+    ADD R8, R9
+    MOV [VAR_ENERGIA], R8
+    POP R9
+fim_efetua_colisão:
     MOV R1, VAR_SONDA_ON    ; coloca o endreço do estado da sonda em R0
     ADD R1, R7               
     MOV [R1], R0
@@ -1141,19 +1127,13 @@ asteroide_reset:
     CMP R9, R5              ; se o limite for o limite para asteróides inócuos, desligar o asteroide
     JZ  asteroide_off       ; salta para o código que desliga o asteroide
     
-    ;MOV R6, R10             ; !!!!Solução atamancada!!!
-    ;POP R10                 ; recupera o valor de R11 para R10 (OFFSET DE MEMÓRIA)
-    ;PUSH R6                 ; guarda o valor de R10 antigo (POSIÇÃO)
-    ;SUB R10, 1              ; decrementa o offset de memória
-    ;SHL R10, 1              ; multiplica o offset de memória por 2
-
-
-    ;JMP asteroide_fim      ; salta para o código que acaba o jogo por colisão
-    ;R10 e R11 possívelmente trocados neste ponto. Irrelevante,no fim de jogo o erro não é visível
     JMP asteroide_fim       ; salta para o código que desliga o asteroide
 
 asteroide_spawn:  
     YIELD    
+    MOV R4, [VAR_STATUS]    ;
+    CMP R4, 0               ; se o jogo estiver acabado
+    JZ asteroides        ; salta para o código que desliga o asteroide
 
     MOV R4, [VAR_AST_NUM]   ; coloca o número de asteroides ativos em R4
     CMP R4, 4               ; se o número de asteroides ativos for 4
@@ -1215,16 +1195,55 @@ asteroide_off:              ; desliga o asteroide
 
 asteroide_fim:              ; NOT FUCKING WORKING
     POP R11                 ; recupera o valor de R11
-    POP R10                 ; recupera o valor de R10
     MOV R5, 0
     MOV [VAR_STATUS], R5
-    
+
+    MOV R10, 2
     CALL fim_jogo
+
+    POP R10                 ; recupera o valor de R10
 
     JMP asteroides 
 aguarda_inicio_a:
     YIELD
     JMP asteroides
+; *********************************************************************************
+;  Processo - Display
+; *********************************************************************************
+PROCESS SP_display
+
+display:
+    MOV R0, DISPLAYS
+    MOV R10, [VAR_ENERGIA]
+    CALL hex_para_dec
+    MOV [R0], R10
+    YIELD
+    JMP display
+
+; *********************************************************************************
+;  Processo - Energia
+; *********************************************************************************
+PROCESS SP_energia
+
+energia:
+    MOV R10, DEC_ENERGIA_TEMPO
+    
+    EI
+
+aguarda_inicio_e:
+    YIELD
+    MOV R0, [VAR_STATUS]
+    CMP R0, 1
+    JNZ aguarda_inicio_e
+
+energia_loop:
+    MOV R10, DEC_ENERGIA_TEMPO
+    CALL atualiza_energia
+        MOV R0, [ENERGIA_LOCK]
+    MOV R0, [VAR_STATUS]
+    CMP R0, 1
+    JNZ aguarda_inicio_e
+    JMP energia_loop
 
 ; *********************************************************************************
 ; Gerador Pseudo-Aleatório - Faz uso dos bits "no ar" do periférico PIN para
