@@ -58,12 +58,25 @@ PLAY_VID            EQU COMANDOS + 5AH  ; endereço do comando para começar a r
 
 MEMORIA_ECRA	EQU	8000H		; endereço de base da memória do ecrã
 
-N_LINHAS        EQU  32        ; número de linhas do ecrã (altura)
-N_COLUNAS       EQU  64        ; número de colunas do ecrã (largura)
+N_LINHAS        EQU  32         ; número de linhas do ecrã (altura)
+N_COLUNAS       EQU  64         ; número de colunas do ecrã (largura)
 
+AMARELOXCLR     EQU 0FFE5H       ; cor do pixel: amarelo extra claro em ARGB
+AMARELO_CLR     EQU 0FFD0H      ; cor do pixel: amarelo em ARGB 
+AMARELO_ESC     EQU 0FFC0H      ; cor do pixel: amarelo em ARGB 
 
-AMARELO         EQU 0F0FFH     ; cor do pixel: amarelo em ARGB (opaco e vermelho no máximo, verde e azul a 0)
+MAGENTAXCLR     EQU 0FF6AH       ; cor do pixel: magenta extra claro em ARGB
+MAGENTA_CLR     EQU 0FF28H      ; cor do pixel: magenta claro em ARGB 
+MAGENTA_ESC     EQU 0FD15H      ; cor do pixel: magenta escuro em ARGB
+
+LARANJA_CLR     EQU 0FF90H      ; cor do pixel: laranja em ARGB
+LARANJA_ESC     EQU 0FF50H      ; cor do pixel: laranja em ARGB
+
+ROXO_CLR        EQU	0F71BH		; cor do pixel: preenchimento da nave em ARGB
+ROXO_ESC	    EQU	0F50AH		; cor do pixel: preenchimento da nave em ARGB
+
 LARGURA_AST		EQU	5			; largura do asteroide
+
 CAST_ESC		EQU	0F442H		; cor do pixel: contorno do asteroide em ARGB 
 CAST_CLR		EQU	0F985H		; cor do pixel: preenchimento do asteroide em ARGB
 VERMELHO       	EQU	0FF00H		; cor do pixel: ponta da nave em ARGB 
@@ -72,7 +85,8 @@ CINZENTO		EQU	0F888H		; cor do pixel: preenchimento da nave em ARGB
 CINZ_CLR		EQU	0F999H		; cor do pixel: preenchimento da nave em ARGB
 AZUL_CLR		EQU	0F79CH		; cor do pixel: preenchimento da nave em ARGB 
 AZUL_ESC		EQU	0F58AH		; cor do pixel: preenchimento da nave em ARGB
-ROXO	     	EQU	0F60AH		; cor do pixel: preenchimento da nave em ARGB
+
+
 
 
 ; *********************************************************************************
@@ -81,7 +95,8 @@ ROXO	     	EQU	0F60AH		; cor do pixel: preenchimento da nave em ARGB
 SONDA_BASE      EQU 21          ; posição vertical inicial da sonda do meio
 SONDA_MAX       EQU 8           ; Altura max da sonda
 LSONDA_V_OFFSET EQU 3           ; Offset da posição vertical inicial da sonda lateral
-LSONDA_H_OFFSET EQU 10            ; Offset da posição horizontal inicial da sonda lateral
+LSONDA_H_OFFSET EQU 10          ; Offset da posição horizontal inicial da sonda lateral
+
 
 ENERGIA_BASE EQU 00064H   ; energia inicial
 DEC_ENERGIA_SONDA  EQU 5  ; decremento da energia por sonda lançada
@@ -89,9 +104,9 @@ DEC_ENERGIA_TEMPO  EQU 3  ; decremento da energia por cada ciclo do relógio "en
 INC_ENERGIA        EQU 25 ; incremento da energia por cada asteroide mineravel destruido
 
 NAVE_X       EQU  26
-NAVE_Y       EQU  22
+NAVE_Y       EQU  23
 LARGURA_NAVE EQU 13
-ALTURA_NAVE  EQU 10
+ALTURA_NAVE  EQU 9
 
 COL_DIST     EQU  3 ; Distância necessária para colisão entre sonda e asteroide
 
@@ -130,10 +145,9 @@ VAR_TECCOUNT:   WORD -1        ; variável para guardar o contador para convers�
 
 VAR_ENERGIA:    WORD 0         ; variável para guardar a energia (ver constante ENERGIA_BASE)
 
-VAR_COR_PIXEL:  WORD AMARELO ; variável para guardar a cor do pixel, default é amarelo
+VAR_COR_PIXEL:  WORD AMARELO_CLR ; variável para guardar a cor do pixel, default é amarelo
 VAR_PROX_SOM:   WORD 0         ; variável para guardar o próximo som a tocar, default é 0
 
-VAR_COR_SONDA:  WORD 0FFC0H    ; variável para guardar a cor da sonda, default é amarelo
 VAR_SONDA_POS:  WORD SONDA_BASE + LSONDA_V_OFFSET  ; variável para guardar a posição da sonda da esquerda 
                 WORD SONDA_BASE                    ; variável para guardar a posição da sonda do meio
                 WORD SONDA_BASE + LSONDA_V_OFFSET  ; variável para guardar a posição da sonda da direita
@@ -176,20 +190,20 @@ VAR_STATUS: WORD 0        ; variável para guardar o estado do jogo (0 - jogo n�
 DEF_ASTEROIDE:					; tabela que define o asteroide (cor, largura, pixels)
 	WORD		LARGURA_AST     ; [DEF_AST + 0] largura do asteroide 1228
     WORD        LARGURA_AST     ; [DEF_AST + 2] altura do asteroide, igual a largura 122A
-    WORD		       0, CAST_ESC, CAST_ESC, CAST_ESC, 0		    ; [DEF_AST + 4 + 2*col + 2*col*lin] 
-	WORD		CAST_ESC, CAST_CLR, CAST_CLR, CAST_CLR, CAST_ESC	;
-    WORD		CAST_ESC, CAST_CLR, CAST_CLR, CAST_CLR, CAST_ESC	;
-    WORD		CAST_ESC, CAST_CLR, CAST_CLR, CAST_CLR, CAST_ESC    ;
-    WORD	    0, CAST_ESC, CAST_ESC, CAST_ESC, 0   ;
+    WORD		          0, AMARELO_ESC, AMARELO_ESC, 0,           0		     ; [DEF_AST + 4 + 2*col + 2*col*lin] 
+	WORD		LARANJA_CLR, AMARELO_ESC, AMARELO_ESC, AMARELO_CLR, 0	         ;	         
+    WORD		LARANJA_CLR, LARANJA_CLR, AMARELO_ESC, AMARELO_CLR, AMARELO_CLR	 ;
+    WORD		LARANJA_CLR, LARANJA_CLR, AMARELO_ESC, AMARELO_ESC, AMARELO_CLR     ;
+    WORD	              0, LARANJA_CLR, LARANJA_CLR, AMARELO_ESC, 0               ;
 
 DEF_AST_NRG:					; tabela que define o asteroide (cor, largura, pixels)
 	WORD		LARGURA_AST     ; [DEF_AST + 0] largura do asteroide 1228
     WORD        LARGURA_AST     ; [DEF_AST + 2] altura do asteroide, igual a largura 122A
-    WORD		       0, CAST_ESC, CAST_ESC, CAST_ESC, 0		     ; [DEF_AST + 4 + 2*col + 2*col*lin] 
-	WORD		CAST_ESC, ROXO, CAST_CLR, ROXO, CAST_ESC	         ;
-    WORD		CAST_ESC, CAST_CLR, ROXO, CAST_CLR, CAST_ESC	     ;
-    WORD		CAST_ESC, ROXO, CAST_CLR, ROXO, CAST_ESC             ;
-    WORD	           0, CAST_ESC, CAST_ESC, CAST_ESC, 0            ;
+    WORD		          0, MAGENTA_CLR, AMARELO_ESC, 0,           0		     ; [DEF_AST + 4 + 2*col + 2*col*lin] 
+	WORD		LARANJA_CLR, MAGENTA_CLR, AMARELO_ESC, MAGENTAXCLR, 0	         ;	         
+    WORD		LARANJA_CLR, MAGENTA_ESC, AMARELO_ESC, MAGENTA_CLR, AMARELO_CLR 	 ;
+    WORD		LARANJA_CLR, ROXO_CLR   , MAGENTA_ESC, AMARELO_ESC, AMARELO_CLR  ;
+    WORD	              0, LARANJA_CLR, ROXO_CLR, AMARELO_ESC, 0               ;
 
 DEF_CLEAR_AST:				; tabela que define o asteroide (cor, largura, pixels)
     WORD		LARGURA_AST
@@ -203,30 +217,29 @@ DEF_CLEAR_AST:				; tabela que define o asteroide (cor, largura, pixels)
 DEF_AST_BOOM:
     WORD		LARGURA_AST
     WORD        LARGURA_AST
-    WORD		AMARELO, 0, 0, 0, AMARELO		;
-    WORD		0, AMARELO, 0, AMARELO, 0		;
-    WORD		0,    0, AMARELO, 0,    0		;
-    WORD		0, AMARELO, 0, AMARELO, 0		;
-    WORD		AMARELO, 0, 0, 0, AMARELO		;
+    WORD		AMARELO_ESC, AMARELO_ESC, 0, 0, 0		;
+    WORD		0, AMARELO_ESC, 0, 0, AMARELO_CLR		;
+    WORD		0,    0, 0, 0,    AMARELO_CLR		;
+    WORD		LARANJA_CLR, AMARELO_CLR, 0, AMARELO_ESC, 0		;
+    WORD		LARANJA_ESC, LARANJA_CLR, 0, AMARELO_ESC, AMARELO_ESC		;
     WORD		LARGURA_AST
     WORD        LARGURA_AST
-    WORD		ROXO, 0, 0, 0, ROXO		;
-    WORD		0, ROXO, 0, ROXO, 0		;
-    WORD		0,  0, ROXO, 0,   0		;
-    WORD		0, ROXO, 0, ROXO, 0		;
-    WORD		ROXO, 0, 0, 0, ROXO		;
+    WORD		0, MAGENTA_CLR, MAGENTA_CLR, 0, 0		;
+    WORD		0, MAGENTA_CLR, 0, 0, AMARELO_CLR		;
+    WORD		0,  0, ROXO_CLR, 0,   AMARELO_CLR		;
+    WORD		AMARELO_ESC, MAGENTA_ESC, 0, AMARELO_CLR, MAGENTAXCLR		;
+    WORD		MAGENTA_ESC, 0, 0, AMARELO_ESC, 0		;
 
 DEF_NAVE: 
     WORD LARGURA_NAVE
     WORD ALTURA_NAVE
-    WORD 0, 0, 0, 0, 0, 0, VERMELHO, 0, 0, 0, 0, 0, 0          
     WORD 0, 0, 0, 0, 0, CINZ_ESC, CINZ_ESC, CINZ_ESC, 0, 0, 0, 0, 0          
     WORD 0, 0, 0, 0, CINZ_ESC, CINZ_CLR, CINZENTO, CINZ_CLR, CINZ_ESC, 0, 0, 0, 0          
     WORD 0, 0, CINZ_ESC, 0, CINZ_ESC, AZUL_CLR, AZUL_CLR, AZUL_CLR, CINZ_ESC, 0, CINZ_ESC, 0, 0
     WORD 0, CINZ_ESC, CINZ_CLR, CINZ_ESC, CINZ_ESC, AZUL_ESC, AZUL_ESC, AZUL_ESC, CINZ_ESC, CINZ_ESC, CINZ_CLR, CINZ_ESC, 0         
-    WORD CINZ_ESC, ROXO, CINZ_CLR, ROXO, CINZ_ESC, CINZENTO, CINZENTO, CINZENTO, CINZ_ESC, ROXO, CINZ_CLR, ROXO, CINZ_ESC           
+    WORD CINZ_ESC, ROXO_ESC, CINZ_CLR, ROXO_ESC, CINZ_ESC, CINZENTO, CINZENTO, CINZENTO, CINZ_ESC, ROXO_ESC, CINZ_CLR, ROXO_ESC, CINZ_ESC           
     WORD CINZ_ESC, CINZ_CLR, CINZ_CLR, CINZ_CLR, CINZ_ESC, CINZENTO, CINZENTO, CINZENTO, CINZ_ESC, CINZ_CLR, CINZ_CLR, CINZ_CLR, CINZ_ESC         
-    WORD CINZ_ESC, ROXO, CINZ_CLR, ROXO, CINZ_ESC, CINZENTO, CINZENTO, CINZENTO, CINZ_ESC, ROXO, CINZ_CLR, ROXO, CINZ_ESC 
+    WORD CINZ_ESC, ROXO_ESC, CINZ_CLR, ROXO_ESC, CINZ_ESC, CINZENTO, CINZENTO, CINZENTO, CINZ_ESC, ROXO_ESC, CINZ_CLR, ROXO_ESC, CINZ_ESC 
     WORD 0, CINZ_ESC, CINZ_CLR, CINZ_ESC, CINZ_CLR, CINZENTO, CINZENTO, CINZENTO, CINZ_CLR, CINZ_ESC, CINZ_CLR, CINZ_ESC, 0         
     WORD 0, 0, CINZ_ESC, 0, 0, CINZ_CLR, CINZ_CLR, CINZ_CLR, 0, 0, CINZ_ESC, 0, 0                   
 
@@ -592,7 +605,15 @@ testa_start:
     CMP R1, R8
     JZ  inicio_jogo
 
+    MOV R8, TEC_3      ; coloca o ID da tecla 0 em R8
+    CMP R1, R8
+    JZ  debug_sprites_call
+
     JMP ha_tecla       ; testa se a tecla permanece premida
+
+debug_sprites_call:
+    CALL debug_sprites
+    JMP ha_tecla
 
 testa_empausa:
     POP R10
@@ -767,6 +788,47 @@ fim_jogo:                    ; r10 escolhe o bg, r0 escolhe o som
 
     RET
 
+debug_sprites:
+    PUSH R0
+    PUSH R7
+    PUSH R10
+    PUSH R11
+    MOV R4, DEF_ASTEROIDE
+    MOV R0, 0
+    MOV R7, 54
+    MOV R10, 2
+    MOV R11, 2
+    PUSH R0
+    CALL desenha_sprite     ; MODIFICA R1 e R0, R5 e R6, FAZER POP APÓS CHAMADA
+    POP R0
+
+debug_sprites_loop:
+    PUSH R0                 ; guarda o valor de R0
+    PUSH R1                 ; guarda o valor de R1
+    PUSH R5
+    PUSH R6
+
+    ADD R11, 6
+    ADD R4, R7              ; para desenhar os varios sprites, incrementa-se o endereço de memória
+    MOV R0, 0
+    CALL desenha_sprite     ; MODIFICA R1 e R0, R5 e R6, FAZER POP APÓS CHAMADA
+    
+    POP R6
+    POP R5
+    POP R1
+    POP R0                  ; recupera o valor de R0
+
+    INC R0                  ; incrementa o valor de R0
+    CMP R0, 4
+    JNZ debug_sprites_loop
+debug_sprites_fim:
+    POP R11
+    POP R10
+    POP R7
+    POP R0
+    CALL desenha_nave
+    RET
+
 ; *********************************************************************************
 ; Processo - Nave
 ; *********************************************************************************
@@ -880,7 +942,7 @@ desenha_sonda:
     MOV R1, [R0+R10]        ; coloca a posição vertical da sonda do meio em R1
     CALL sonda_offset       ; coloca em R2 a posição horizontal da sonda do meio
 
-    MOV R3, [VAR_COR_SONDA] ; coloca a cor da sonda do meio em R3
+    MOV R3, MAGENTA_CLR       ; coloca a cor da sonda do meio em R3
 
     CALL escreve_pixel      ; escreve o pixel na posição da sonda do meio
     ADD R1, 1               ; aponta para a posição gráfica vertical da sonda a apagar
