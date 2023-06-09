@@ -682,6 +682,7 @@ atualiza_energia:
     MOV [VAR_ENERGIA], R1 ; atualiza o valor da energia
     CMP R1, 0             ; se a energia for superior a 0
     JGT fim_atualiza      ; termina a atualização, caso contrário:
+    MOV R0, 6             ; coloca o valor 6 em R0 para selecionar o som 6 (fim do jogo por energia)
     MOV R10, 3            ; coloca o valor 3 em R10 para selecionar o ecrã 3 (fim do jogo por energia)
     CALL fim_jogo         ; chama a função do fim do jogo
 fim_atualiza:
@@ -694,10 +695,11 @@ inicio_jogo:
     MOV R1, 1                ; coloca o valor 1 em R1, para indicar que o jogo está iniciado
     MOV [VAR_STATUS], R1     ; atualiza o valor da variável de estado do jogo
     MOV R1, 0                ; coloca o valor 0 em R1, para selecionar o background 0 (gameplay)
-    MOV [SELECIONA_CENARIO], R1 ; atualiza o valor da variável de background
-    MOV R1, 0              
+    MOV [SELECIONA_CENARIO], R1 ; atualiza o valor da variável de background           
     MOV [VAR_AST_NUM], R1    ; coloca o valor 3 em VAR_AST_NUM  
-
+    PUSH R0 
+    MOV R0, 5
+    POP R0
     MOV R1, ENERGIA_BASE
     MOV [VAR_ENERGIA], R1    ; coloca o valor 100 em VAR_ENERGIA
 
@@ -709,14 +711,15 @@ inicio_jogo:
     EI
     JMP tec_ciclo            ; volta ao ciclo principal do teclado
 
-fim_jogo:                    ; r10 escolhe o bg
+fim_jogo:                    ; r10 escolhe o bg, r0 escolhe o som
     DI
 
     PUSH R0
     PUSH R1
     PUSH R2
     PUSH R3
-    
+
+    CALL toca_som            ; chama a função do som
     MOV R1, 0                ; coloca o valor 0 em R1, para indicar que o jogo está terminado
     MOV [VAR_STATUS], R1     ; atualiza o valor da variável de estado do jogo
     MOV R0, 0
@@ -1240,6 +1243,7 @@ asteroide_fim:              ; NOT FUCKING WORKING
     MOV R5, 0
     MOV [VAR_STATUS], R5
 
+    MOV R0, 7             ; coloca o valor 6 em R0 para selecionar o som 6 (fim do jogo por energia)
     MOV R10, 2
     CALL fim_jogo
 
