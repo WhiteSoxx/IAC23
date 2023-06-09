@@ -1450,8 +1450,8 @@
     "positionX" : 652,
     "positionY" : 405,
     "simGuiVisibleInSimulation" : true,
-    "simGuiXRelative" : 149,
-    "simGuiYRelative" : 115,
+    "simGuiXRelative" : 304,
+    "simGuiYRelative" : 275,
     "simGuiWidth" : 132,
     "simGuiHeight" : 139,
     "columns" : 4,
@@ -1545,6 +1545,18 @@
       "playAsClip" : true
     }, {
       "filePathName" : "assets/cooldown.wav",
+      "relative sound volume" : 0.65,
+      "relative start time" : 0.0,
+      "relative stop time" : 1.0,
+      "playAsClip" : true
+    }, {
+      "filePathName" : "assets/asteroideboom.wav",
+      "relative sound volume" : 0.65,
+      "relative start time" : 0.0,
+      "relative stop time" : 1.0,
+      "playAsClip" : true
+    }, {
+      "filePathName" : "assets/mineravelboom.wav",
       "relative sound volume" : 0.65,
       "relative start time" : 0.0,
       "relative stop time" : 1.0,
