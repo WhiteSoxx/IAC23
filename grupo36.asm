@@ -124,22 +124,23 @@ SP_display:
     STACK 20H
 SP_energia:
 
-VAR_LINHA:      WORD 0            ; variável para guardar a linha atual
-VAR_COLUNA:     WORD 0            ; variável para guardar a coluna atual
-VAR_TECCOUNT:   WORD -1         ; variável para guardar o contador para conversão de teclas
-VAR_ENERGIA:    WORD ENERGIA_BASE; variável para guardar a energia (ver constante ENERGIA_BASE)
+VAR_LINHA:      WORD 0         ; variável para guardar a linha atual
+VAR_COLUNA:     WORD 0         ; variável para guardar a coluna atual
+VAR_TECCOUNT:   WORD -1        ; variável para guardar o contador para conversão de teclas
+
+VAR_ENERGIA:    WORD 0         ; variável para guardar a energia (ver constante ENERGIA_BASE)
 
 VAR_COR_PIXEL:  WORD COR_PIXEL ; variável para guardar a cor do pixel, default é vermelho
 VAR_PROX_SOM:   WORD 0         ; variável para guardar o próximo som a tocar, default é 0
 
-VAR_COR_SONDA:  WORD 0FFC0H      ; variável para guardar a cor da sonda, default é amarelo
+VAR_COR_SONDA:  WORD 0FFC0H    ; variável para guardar a cor da sonda, default é amarelo
 VAR_SONDA_POS:  WORD SONDA_BASE + LSONDA_V_OFFSET  ; variável para guardar a posição da sonda da esquerda 
                 WORD SONDA_BASE                    ; variável para guardar a posição da sonda do meio
-                WORD SONDA_BASE + LSONDA_V_OFFSET ; variável para guardar a posição da sonda da direita
+                WORD SONDA_BASE + LSONDA_V_OFFSET  ; variável para guardar a posição da sonda da direita
 
-VAR_SONDA_ON:   WORD 0           ; variável para guardar o estado da sonda do meio (0 - desligada, 1 - ligada)
-                WORD 0           ; variável para guardar o estado da sonda da esquerda (0 - desligada, 1 - ligada)
-                WORD 0           ; variável para guardar o estado da sonda da direita (0 - desligada, 1 - ligada)
+VAR_SONDA_ON:   WORD 0         ; variável para guardar o estado da sonda do meio (0 - desligada, 1 - ligada)
+                WORD 0         ; variável para guardar o estado da sonda da esquerda (0 - desligada, 1 - ligada)
+                WORD 0         ; variável para guardar o estado da sonda da direita (0 - desligada, 1 - ligada)
 
 VAR_AST_ON:     WORD 0  
                 WORD 0  
@@ -161,10 +162,10 @@ VAR_AST_POS_V:  WORD V_BASE_AST   ; variável para guardar a posição vertical 
                 WORD V_BASE_AST   ; variável para guardar a posição vertical do asteroide 3
                 WORD V_BASE_AST   ; variável para guardar a posição vertical do asteroide 4
 
-VAR_AST_POS_H:  WORD H_BASE_AST_1   ; variável para guardar a posição horizontal do asteroide 0
-                WORD H_BASE_AST_3   ; variável para guardar a posição horizontal do asteroide 1
-                WORD H_BASE_AST_3   ; variável para guardar a posição horizontal do asteroide 2
-                WORD H_BASE_AST_3  ; variável para guardar a posição horizontal do asteroide 3
+VAR_AST_POS_H:  WORD H_BASE_AST_1 ; variável para guardar a posição horizontal do asteroide 0
+                WORD H_BASE_AST_3 ; variável para guardar a posição horizontal do asteroide 1
+                WORD H_BASE_AST_3 ; variável para guardar a posição horizontal do asteroide 2
+                WORD H_BASE_AST_3 ; variável para guardar a posição horizontal do asteroide 3
                 WORD H_BASE_AST_5 ; variável para guardar a posição horizontal do asteroide 4
 
 VAR_POS_H_ALVO: WORD 0    ; variável para guardar a posição horizontal do objeto a desenhar
@@ -179,16 +180,16 @@ DEF_ASTEROIDE:					; tabela que define o asteroide (cor, largura, pixels)
 	WORD		CAST_ESC, CAST_CLR, CAST_CLR, CAST_CLR, CAST_ESC	;
     WORD		CAST_ESC, CAST_CLR, CAST_CLR, CAST_CLR, CAST_ESC	;
     WORD		CAST_ESC, CAST_CLR, CAST_CLR, CAST_CLR, CAST_ESC    ;
-    WORD	    CAST_ESC, CAST_ESC, CAST_ESC, CAST_ESC, CAST_ESC    ;
+    WORD	    0, CAST_ESC, CAST_ESC, CAST_ESC, 0   ;
 
 DEF_AST_NRG:					; tabela que define o asteroide (cor, largura, pixels)
 	WORD		LARGURA_AST     ; [DEF_AST + 0] largura do asteroide 1228
     WORD        LARGURA_AST     ; [DEF_AST + 2] altura do asteroide, igual a largura 122A
-    WORD		       0, CAST_ESC, CAST_ESC, CAST_ESC, 0		    ; [DEF_AST + 4 + 2*col + 2*col*lin] 
-	WORD		CAST_ESC, ROXO, CAST_CLR, ROXO, CAST_ESC	;
-    WORD		CAST_ESC, CAST_CLR, ROXO, CAST_CLR, CAST_ESC	;
-    WORD		CAST_ESC, ROXO, CAST_CLR, ROXO, CAST_ESC    ;
-    WORD	    CAST_ESC, CAST_ESC, CAST_ESC, CAST_ESC, CAST_ESC    ;
+    WORD		       0, CAST_ESC, CAST_ESC, CAST_ESC, 0		     ; [DEF_AST + 4 + 2*col + 2*col*lin] 
+	WORD		CAST_ESC, ROXO, CAST_CLR, ROXO, CAST_ESC	         ;
+    WORD		CAST_ESC, CAST_CLR, ROXO, CAST_CLR, CAST_ESC	     ;
+    WORD		CAST_ESC, ROXO, CAST_CLR, ROXO, CAST_ESC             ;
+    WORD	           0, CAST_ESC, CAST_ESC, CAST_ESC, 0            ;
 
 DEF_CLEAR_AST:				; tabela que define o asteroide (cor, largura, pixels)
     WORD		LARGURA_AST
@@ -247,10 +248,11 @@ inicio:		                  ; inicializações
     
     CALL teclado              ; inicia o processo do teclado
     CALL nave                 ; inicia o processo da nave
-    CALL display              ; inicia o processo do display
     CALL energia              ; inicia o processo da energia
+    CALL display              ; inicia o processo do display
 
 	MOV	R11, -2		          ; número de sondas a criar é 3 (-1, 0, 1)
+
 loop_sondas:
 	ADD	R11, 1			      ; próxima sonda
 	CALL	init_sonda	      ; cria uma nova instância do processo sonda (o valor de R11 distingue-as)
@@ -687,6 +689,7 @@ inicio_jogo:
 
     EI0
     EI1
+    EI2
     EI
     JMP tec_ciclo            ; volta ao ciclo principal do teclado
 
@@ -698,7 +701,6 @@ fim_jogo:                    ; r10 escolhe o bg
     PUSH R2
     PUSH R3
     
-    MOV R1, [VAR_STATUS]     ; coloca a variável de estado do jogo em R1
     MOV R1, 0                ; coloca o valor 0 em R1, para indicar que o jogo está terminado
     MOV [VAR_STATUS], R1     ; atualiza o valor da variável de estado do jogo
     MOV R0, 0
@@ -738,6 +740,7 @@ fim_jogo:                    ; r10 escolhe o bg
     MOV R1, 0
     MOV [VAR_AST_NUM], R1    ; coloca o valor 0 em VAR_AST_NUM
     MOV [VAR_ENERGIA], R1    ; coloca o valor 0 em VAR_ENERGIA
+    
     POP R3
     POP R2
     POP R1
@@ -1225,7 +1228,7 @@ PROCESS SP_energia
 
 energia:
     MOV R10, DEC_ENERGIA_TEMPO
-
+    
     EI
 
 aguarda_inicio_e:
