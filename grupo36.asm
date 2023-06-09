@@ -993,7 +993,7 @@ verifica_colisao:
 
     CALL sonda_offset       ; coloca em R2 a posição horizontal da sonda do meio
     MOV R7, R10             ; R7 retem o offset original da instancia da sonda
-
+    MOV R10, 0
     MOV R11, R10
     ADD R11, 2
     ADD R11, 6              ; R11 é o valor imediatamente acima do offset maximo do asteroide a verificar
