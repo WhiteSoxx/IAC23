@@ -160,10 +160,8 @@ VAR_AST_ON:     WORD 0
                 WORD 0  
                 WORD 0
                 WORD 0
-                WORD 0
 
 VAR_AST_TIPO:   WORD 0
-                WORD 0
                 WORD 0
                 WORD 0
                 WORD 0
@@ -174,18 +172,23 @@ VAR_AST_POS_V:  WORD V_BASE_AST   ; variável para guardar a posição vertical 
                 WORD V_BASE_AST   ; variável para guardar a posição vertical do asteroide 1
                 WORD V_BASE_AST   ; variável para guardar a posição vertical do asteroide 2
                 WORD V_BASE_AST   ; variável para guardar a posição vertical do asteroide 3
-                WORD V_BASE_AST   ; variável para guardar a posição vertical do asteroide 4
 
-VAR_AST_POS_H:  WORD H_BASE_AST_1 ; variável para guardar a posição horizontal do asteroide 0
-                WORD H_BASE_AST_3 ; variável para guardar a posição horizontal do asteroide 1
-                WORD H_BASE_AST_3 ; variável para guardar a posição horizontal do asteroide 2
-                WORD H_BASE_AST_3 ; variável para guardar a posição horizontal do asteroide 3
-                WORD H_BASE_AST_5 ; variável para guardar a posição horizontal do asteroide 4
+VAR_AST_POS_H:  WORD 0 ; variável para guardar a posição horizontal do asteroide 0
+                WORD 0 ; variável para guardar a posição horizontal do asteroide 1
+                WORD 0 ; variável para guardar a posição horizontal do asteroide 2
+                WORD 0 ; variável para guardar a posição horizontal do asteroide 3
 
 VAR_POS_H_ALVO: WORD 0    ; variável para guardar a posição horizontal do objeto a desenhar
 VAR_POS_V_ALVO: WORD 0    ; variável para guardar a posição vertical do objeto a desenhar
 
 VAR_STATUS: WORD 0        ; variável para guardar o estado do jogo (0 - jogo não iniciado, 1 - jogo iniciado)
+
+TAB_AST:
+    WORD 3, 1, COLISAO_ASTEROIDE
+    WORD 32, -1, LIM_ASTEROIDE
+    WORD 32, COLISAO_MID_ASTEROIDE
+    WORD 32, 1, LIM_ASTEROIDE
+    WORD 61, -1, COLISAO_ASTEROIDE
 
 DEF_ASTEROIDE:					; tabela que define o asteroide (cor, largura, pixels)
 	WORD		LARGURA_AST     ; [DEF_AST + 0] largura do asteroide 1228
@@ -201,7 +204,7 @@ DEF_AST_NRG:					; tabela que define o asteroide (cor, largura, pixels)
     WORD        LARGURA_AST     ; [DEF_AST + 2] altura do asteroide, igual a largura 122A
     WORD		          0, MAGENTA_CLR, AMARELO_ESC, 0,           0		     ; [DEF_AST + 4 + 2*col + 2*col*lin] 
 	WORD		LARANJA_CLR, MAGENTA_CLR, AMARELO_ESC, MAGENTAXCLR, 0	         ;	         
-    WORD		LARANJA_CLR, MAGENTA_ESC, AMARELO_ESC, MAGENTA_CLR, AMARELO_CLR 	 ;
+    WORD		LARANJA_CLR, MAGENTA_ESC, AMARELO_ESC, MAGENTA_CLR, AMARELO_CLR  ;
     WORD		LARANJA_CLR, ROXO_CLR   , MAGENTA_ESC, AMARELO_ESC, AMARELO_CLR  ;
     WORD	              0, LARANJA_CLR, ROXO_CLR, AMARELO_ESC, 0               ;
 
@@ -294,7 +297,7 @@ loop_asteroides:
 	ADD	R11, 1			      ; próxima sonda
 	CALL	init_asteroides	      ; cria uma nova instância do processo sonda (o valor de R11 distingue-as)
 						      ; Cada processo fica com uma cópia independente dos registos, R11 serve como offset
-	CMP  R11, 5			      ; já criou as instâncias todas?
+	CMP  R11, 4			      ; já criou as instâncias todas?
     JNZ	loop_asteroides          ; se não, continua
 
     MOV  R1, [START_LOCK]     ; Bloqueia o processo principal
@@ -745,7 +748,7 @@ fim_jogo:                    ; r10 escolhe o bg, r0 escolhe o som
     MOV R1, 0                ; coloca o valor 0 em R1, para indicar que o jogo está terminado
     MOV [VAR_STATUS], R1     ; atualiza o valor da variável de estado do jogo
     MOV R0, 0
-    MOV R2, 30               ; DE VAR_SONDA_ON à ultima VAR a ser reiniciada a 0, há 14 WORDS
+    MOV R2, 24               ; DE VAR_SONDA_ON à ultima VAR a ser reiniciada a 0, há 14 WORDS
     MOV R3, VAR_SONDA_ON
     ADD R2, R3
     vars_zero_loop:
@@ -754,7 +757,7 @@ fim_jogo:                    ; r10 escolhe o bg, r0 escolhe o som
         CMP R3, R2
         JNZ vars_zero_loop
     MOV R0, V_BASE_AST
-    MOV R2, 12               ; 5 VARS DE ASTEROIDE 
+    MOV R2, 8               ; 5 VARS DE ASTEROIDE 
     MOV R3, VAR_AST_POS_V
     ADD R2, R3    
     ast_vpos_loop:
@@ -992,10 +995,9 @@ verifica_colisao:
     MOV R7, R10             ; R7 retem o offset original da instancia da sonda
 
     MOV R11, R10
-    ADD R11, 6               ; R11 é o valor imediatamente acima do offset maximo do asteroide a verificar
-                            ; Existe aqui uma ineficiência. As sondas laterais verificam ambas o asteróide do meio, por
-                            ; impossível que seja uma colisão neste caso.
-
+    ADD R11, 2
+    ADD R11, 6              ; R11 é o valor imediatamente acima do offset maximo do asteroide a verificar
+                            ; Existe uma ineficiência, no sentido em que uma sonda verifica todos os asteróides, mesmo os que nunca intersectará, uma vez que a cada dado momento um dos dados asteróides pode estar em condições de colidir com a sonda ou não, sem maneira eficaz de o discernir
 
 loop_colisao:               ; R1 - Pos vertical da sonda, R2 - Pos horizontal da sonda
 
@@ -1101,43 +1103,7 @@ init_asteroides:
     MOV R1, VAR_AST_POS_V   ; coloca o endereço da posição vertical do asteroide em R1
     MOV R2, VAR_AST_POS_H   ; coloca o endereço da posição horizontal do asteroide em R2
     MOV R3, VAR_AST_ON      ; coloca o endereço do estado do asteroide em R3
-    MOV R7, [R1+R10]        ; coloca a posição vertical ORIGINAL do asteroide em R7
-    MOV R8, [R2+R10]        ; coloca a posição horizontal ORIGINAL do asteroide em R8
-    MOV R9, COLISAO_ASTEROIDE; coloca o limite da colisão em r9
-
-calc_offset_a:              ; calcula o offset horizontal a aplicar por ciclo com base na instância, GUARDA EM R0
-    CMP R11, 5              ; se a instância for 5
-    JZ asteroide_esq        ; salta para o código do asteroide da esquerda
-    CMP R11, 4              ; se a instância for 4
-    JZ asteroide_dir        ; salta para o código do asteroide do meio
-    CMP R11, 3              ; se a instância for 3
-    JZ asteroide_meio       ; salta para o código do asteroide do meio
-    CMP R11, 2              ; se a instância for 2
-    JZ asteroide_esq        ; salta para o código do asteroide da direita
-    CMP R11, 1              ; se a instância for 1
-    JZ asteroide_dir        ; salta para o código do asteroide da esquerda
-
-
-inocuo:
-    MOV R9, LIM_ASTEROIDE               ; coloca o limite da colisão do asteroide do meio em R9
-    JMP asteroides          ; salta para o código que move o asteroide
-
-asteroide_esq:              ; asteroides que se movem para a esquerda
-    MOV R0, -1               ; coloca o offset horizontal do asteroide par em R0
-    CMP R11, 2              ; se a instância for 4
-    JZ  inocuo
-    JMP asteroides          ; salta para o código que move o asteroide
-
-asteroide_dir:              ; asteroides que se movem para a direita
-    MOV R0, 1               ; coloca o offset horizontal do asteroide ímpar em R0
-    CMP R11, 4              ; se a instância for 3
-    JZ  inocuo
-    JMP asteroides          ; salta para o código que move o asteroide
-    
-asteroide_meio:
-    MOV R9, COLISAO_MID_ASTEROIDE              ; coloca o limite da colisão do asteroide do meio em R9
-    MOV R0, 0               ; coloca o offset horizontal do asteroide do meio em R0
-    JMP asteroides          ; salta para o código que move o asteroide
+    ; R9, LIMITE DA COLISÃO DO ASTEROIDE
 
 aguarda_inicio_a:
     YIELD
@@ -1227,9 +1193,20 @@ asteroide_spawn:
     CALL numero_aleatorio   ; coloca um número aleatório entre 0 e 15 em R0
     MOV R6, R0              ; coloca o número aleatório em R6
     POP R0
+    MOV R5, 4               ; coloca o número 4 em R5
+    MOD R6, R5              ; Resto de 15/4 = 0, 1, 2, ou 3 
+    MOV R7, 6               ; coloca o número 6 em R7, para andar para a cobinação seguinte
 
-    SHR R6, 3               ; Isola o ultimo bit do número aleatório (0 ou 1)
-    JZ  asteroide_check     ; 50% de chance de spawnar um asteroide POR PROCESSO,
+    MOV R5, TAB_AST         ; TAB_AST contem os trios possíveis (Coluna, direção, limite)
+
+    MUL R6, R7              ; multiplica o número aleatório por 6
+    ADD R5, R6
+    MOV R6, [R5]            ; coloca o valor da coluna em R6
+    MOV [R2+R10], R6        ; coloca o valor da coluna no respetivo asteroide
+    ADD R5, 2
+    MOV R0, [R5]            ; coloca o valor da direção no registo
+    ADD R5, 2
+    MOV R9, [R5]            ; coloca o valor do limite no registo
 
     MOV R5, 1
     MOV [R3+R10], R5        ; atualiza o estado do asteroide
@@ -1246,12 +1223,13 @@ asteroide_spawn:
     MOV [R5+R10], R6        ; atualiza o tipo do asteroide
 
 fim_spawn:
+    POP R0   
     MOV R6, [R5+R10]
     MOV R5, 2
     MUL R6, R5              ; multiplica o tipo do asteroide por 2
     MOV R5, 27
     MUL R6, R5              ; Numero de words no asteroide, contingente no mineravel estar definido seguidamente
-    POP R0   
+
 
     JMP asteroide_on        ; começa a mover o asteroide
 
@@ -1286,8 +1264,9 @@ asteroide_off:              ; desliga o asteroide
     POP R10
     MOV R4, 0               ; coloca o estado do asteroide em R4
     MOV [R3+R10], R4        ; atualiza o estado do asteroide
-    MOV [R1+R10], R7        ; Reinicia a posição vertical do asteroide
-    MOV [R2+R10], R8        ; Reinicia a posição horizontal do asteroide
+    MOV R5, V_BASE_AST
+    MOV [R1+R10], R5        ; Reinicia a posição vertical do asteroide
+    MOV [R2+R10], R4        ; Reinicia a posição horizontal do asteroide
     
     MOV R5, 1
 
@@ -1297,16 +1276,16 @@ asteroide_off:              ; desliga o asteroide
 
     MOV R5, VAR_AST_TIPO
     MOV R6, 0
-    MOV [R5+R10], R6         ; atualiza o tipo do asteroide
+    MOV [R5+R10], R6        ; atualiza o tipo do asteroide
 
-    JMP asteroides     ; volta a verificar o estado do asteroide
+    JMP asteroides          ; volta a verificar o estado do asteroide
 
 asteroide_fim:              ; NOT FUCKING WORKING
     POP R11                 ; recupera o valor de R11
     MOV R5, 0
     MOV [VAR_STATUS], R5
 
-    MOV R0, 7             ; coloca o valor 6 em R0 para selecionar o som 6 (fim do jogo por colisao)
+    MOV R0, 7               ; coloca o valor 6 em R0 para selecionar o som 6 (fim do jogo por colisao)
     MOV R10, 2
     CALL fim_jogo
 
