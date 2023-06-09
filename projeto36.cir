@@ -10,14 +10,14 @@
   "primary screen width" : 1280,
   "primary screen height" : 720,
   "window" : {
-    "X absolute" : -6,
-    "Y absolute" : 1,
-    "X relative" : -6,
-    "Y relative" : 1,
-    "width" : 1292,
-    "height" : 725,
+    "X absolute" : -7,
+    "Y absolute" : -7,
+    "X relative" : -7,
+    "Y relative" : -7,
+    "width" : 1295,
+    "height" : 735,
     "leftRightDividerLocation" : 197,
-    "topBottomDividerLocation" : 555
+    "topBottomDividerLocation" : 565
   },
   "connections" : [ {
     "className" : "Connection",
@@ -1533,7 +1533,7 @@
     "image paths" : [ "assets/gameplay.png", "assets/start.png", "assets/dead.png", "assets/energy.png", "assets/pausa.png" ],
     "sounds/videos settings" : [ {
       "filePathName" : "assets/probe.wav",
-      "relative sound volume" : 0.65,
+      "relative sound volume" : 0.4,
       "relative start time" : 0.0,
       "relative stop time" : 1.0,
       "playAsClip" : true
@@ -1558,6 +1558,24 @@
     }, {
       "filePathName" : "assets/mineravelboom.wav",
       "relative sound volume" : 0.65,
+      "relative start time" : 0.0,
+      "relative stop time" : 1.0,
+      "playAsClip" : true
+    }, {
+      "filePathName" : "assets/start.wav",
+      "relative sound volume" : 1.0,
+      "relative start time" : 0.0,
+      "relative stop time" : 1.0,
+      "playAsClip" : true
+    }, {
+      "filePathName" : "assets/fimenergia.wav",
+      "relative sound volume" : 1.0,
+      "relative start time" : 0.0,
+      "relative stop time" : 1.0,
+      "playAsClip" : true
+    }, {
+      "filePathName" : "assets/fimasteroide.wav",
+      "relative sound volume" : 1.0,
       "relative start time" : 0.0,
       "relative stop time" : 1.0,
       "playAsClip" : true
