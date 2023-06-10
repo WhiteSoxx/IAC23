@@ -129,20 +129,20 @@ H_BASE_AST_5 EQU 61
 ; *********************************************************************************
 	PLACE       1000H
 
-	STACK TAMANHO_PILHA 			; espaçco reservado para a pilha (200H bytes, ou 100H words)
-SP_inicial:				; Stack pointer do programa inicial
-    STACK TAMANHO_PILHA          ; espaço reservado para a pilha (200H bytes, ou 100H words)
+	STACK TAMANHO_PILHA 			 ; espaçco reservado para a pilha (200H bytes, ou 100H words)
+SP_inicial:		 ; Stack pointer do programa inicial
+    STACK TAMANHO_PILHA              ; espaço reservado para a pilha (200H bytes, ou 100H words)
 SP_teclado:      ; Stack pointer do programa do teclado
-    STACK TAMANHO_PILHA          ; espaço reservado para a pilha (200H bytes, ou 100H words)
+    STACK TAMANHO_PILHA              ; espaço reservado para a pilha (200H bytes, ou 100H words)
 SP_nave:         ; Stack pointer do programa da nave
     STACK TAMANHO_PILHA * 3          ; espaço reservado para a pilha (200H bytes, ou 100H words)
 SP_sonda:        ; Stack pointer do programa da sonda
     STACK TAMANHO_PILHA * 5          ; espaço reservado para a pilha (200H bytes, ou 100H words)
 SP_asteroides:   ; Stack pointer do programa dos asteroides
     STACK 20H
-SP_display:
+SP_display:      ; Stack pointer do programa do display
     STACK 20H
-SP_energia:
+SP_energia:      ; Stack pointer do programa da energia
 
 VAR_LINHA:      WORD 0         ; variável para guardar a linha atual
 VAR_COLUNA:     WORD 0         ; variável para guardar a coluna atual
@@ -213,7 +213,7 @@ DEF_AST_NRG:					; tabela que define o asteroide (cor, largura, pixels)
     WORD		LARANJA_CLR, ROXO_CLR   , MAGENTA_ESC, AMARELO_ESC, AMARELO_CLR  ;
     WORD	              0, LARANJA_CLR, ROXO_CLR, AMARELO_ESC, 0               ;
 
-DEF_CLEAR_AST:				; tabela que define o asteroide (cor, largura, pixels)
+DEF_CLEAR_AST:				; tabela que serve para apagar o asteroide
     WORD		LARGURA_AST
     WORD        LARGURA_AST
     WORD		0, 0, 0, 0, 0		;
@@ -222,7 +222,7 @@ DEF_CLEAR_AST:				; tabela que define o asteroide (cor, largura, pixels)
     WORD		0, 0, 0, 0, 0		;
     WORD		0, 0, 0, 0, 0		;
 
-DEF_AST_BOOM:
+DEF_AST_BOOM:               ; tabela que define os asteroides destruídos (cor, largura, pixels)
     WORD		LARGURA_AST
     WORD        LARGURA_AST
     WORD		AMARELO_ESC, AMARELO_ESC, 0, 0, 0		;
@@ -238,7 +238,7 @@ DEF_AST_BOOM:
     WORD		AMARELO_ESC, MAGENTA_ESC, 0, AMARELO_CLR, MAGENTAXCLR		;
     WORD		MAGENTA_ESC, 0, 0, AMARELO_ESC, 0		;
 
-DEF_NAVE: 
+DEF_NAVE:                  ; tabela que define a nave(cor, largura, pixels)
     WORD LARGURA_NAVE
     WORD ALTURA_NAVE
     WORD 0, 0, 0, 0, 0, CINZ_ESC, CINZ_ESC, CINZ_ESC, 0, 0, 0, 0, 0          
@@ -251,7 +251,7 @@ DEF_NAVE:
     WORD 0, CINZ_ESC, CINZ_CLR, CINZ_ESC, CINZ_CLR, CINZENTO, CINZENTO, CINZENTO, CINZ_CLR, CINZ_ESC, CINZ_CLR, CINZ_ESC, 0         
     WORD 0, 0, CINZ_ESC, 0, 0, CINZ_CLR, CINZ_CLR, CINZ_CLR, 0, 0, CINZ_ESC, 0, 0
 
-DEF_LUZES:
+DEF_LUZES:                 ; tabela que define as várias cores das luzes
     WORD AMARELO_ESC
     WORD LARANJA_CLR
     WORD MAGENTA_ESC
@@ -266,7 +266,7 @@ NAVE_LOCK:   LOCK 0
 START_LOCK:  LOCK 0
 PAUSA_LOCK:  LOCK 0
 ENERGIA_LOCK:LOCK 0
-LUZES_LOCK:LOCK 0
+LUZES_LOCK:  LOCK 0
 ; ******************************************************************************
 ; * Tabela de interrupções
 ; ******************************************************************************
@@ -526,19 +526,19 @@ int_sonda:
 int_ast:
     PUSH R0
     MOV R0, 0
-    MOV [AST_LOCK], R0        ; desbloqueia o processo da sonda
+    MOV [AST_LOCK], R0        ; desbloqueia o processo do asteroide
     POP R0
     RFE 
 int_energia:
     PUSH R0
     MOV R0, 0
-    MOV [ENERGIA_LOCK], R0    ; desbloqueia o processo da sonda
+    MOV [ENERGIA_LOCK], R0    ; desbloqueia o processo da energia
     POP R0
     RFE
 int_luzes:
     PUSH R0
     MOV R0, 0
-    MOV [LUZES_LOCK], R0    ; desbloqueia o processo da sonda
+    MOV [LUZES_LOCK], R0    ; desbloqueia o processo das luzes
     POP R0
     RFE  
 
@@ -1329,7 +1329,7 @@ asteroide_off:              ; desliga o asteroide
 
     JMP asteroides          ; volta a verificar o estado do asteroide
 
-asteroide_fim:              ; NOT FUCKING WORKING
+asteroide_fim:              ; 
     POP R11                 ; recupera o valor de R11
     MOV R5, 0
     MOV [VAR_STATUS], R5
