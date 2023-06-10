@@ -48,6 +48,7 @@ DEFINE_COLUNA  		EQU COMANDOS + 0CH	; endereço do comando para definir a coluna
 DEFINE_PIXEL   		EQU COMANDOS + 12H	; endereço do comando para escrever um pixel
 APAGA_AVISO     	EQU COMANDOS + 40H  ; endereço do comando para apagar o aviso de nenhum cenário selecionado
 APAGA_ECRÃ	 		EQU COMANDOS + 02H	; endereço do comando para apagar todos os pixels já desenhados
+SELECIONA_ECRA 		EQU COMANDOS + 04H	; endereço do comando para selecionar o ecrã no qual desenhar
 SELECIONA_CENARIO   EQU COMANDOS + 42H  ; endereço do comando para selecionar uma imagem de fundo
 APAGA_FRONTAL       EQU COMANDOS + 44H  ; endereço do comando para apagar a imagem frontal
 SELECIONA_FRONTAL   EQU COMANDOS + 46H  ; endereço do comando para selecionar uma imagem frontal
@@ -63,11 +64,11 @@ MEMORIA_ECRA	EQU	8000H		; endereço de base da memória do ecrã
 N_LINHAS        EQU  32         ; número de linhas do ecrã (altura)
 N_COLUNAS       EQU  64         ; número de colunas do ecrã (largura)
 
-AMARELOXCLR     EQU 0FFE5H       ; cor do pixel: amarelo extra claro em ARGB
+AMARELOXCLR     EQU 0FFE5H      ; cor do pixel: amarelo extra claro em ARGB
 AMARELO_CLR     EQU 0FFD0H      ; cor do pixel: amarelo em ARGB 
 AMARELO_ESC     EQU 0FFC0H      ; cor do pixel: amarelo em ARGB 
 
-MAGENTAXCLR     EQU 0FF6AH       ; cor do pixel: magenta extra claro em ARGB
+MAGENTAXCLR     EQU 0FF6AH      ; cor do pixel: magenta extra claro em ARGB
 MAGENTA_CLR     EQU 0FF28H      ; cor do pixel: magenta claro em ARGB 
 MAGENTA_ESC     EQU 0FD15H      ; cor do pixel: magenta escuro em ARGB
 
@@ -296,11 +297,11 @@ loop_sondas:
 
 MOV R11, 0
 loop_asteroides:
-	ADD	R11, 1			      ; próxima sonda
-	CALL	init_asteroides	      ; cria uma nova instância do processo sonda (o valor de R11 distingue-as)
+	ADD	R11, 1			      ; próximo asteroide
+	CALL	init_asteroides	  ; cria uma nova instância do processo sonda (o valor de R11 distingue-as)
 						      ; Cada processo fica com uma cópia independente dos registos, R11 serve como offset
 	CMP  R11, 4			      ; já criou as instâncias todas?
-    JNZ	loop_asteroides          ; se não, continua
+    JNZ	loop_asteroides       ; se não, continua
 
     MOV  R1, [START_LOCK]     ; Bloqueia o processo principal
 
@@ -380,6 +381,8 @@ desenha_nave:
     PUSH R11
     MOV R10, NAVE_Y  ; coloca a posição vertical do canto do sprite da nave em R10
     MOV R11, NAVE_X  ; coloca a posição horizontal do canto do sprite da nave em R11
+    MOV R4, 0
+    MOV [SELECIONA_ECRA], R4
     MOV R4, DEF_NAVE ; coloca o endereço da tabela do sprite da nave em R4
     CALL desenha_sprite 
     POP R11
@@ -391,7 +394,9 @@ desenha_nave:
     POP R0
     RET
 ; *********************************************************************************
-; Desenha Asteroide - R10 coord. vertical, R11, coord HORIZONTAL
+; Desenha Asteroide - Desenha um asteroide na posição "fisica" R10, R11
+;        Argumentos - R10: coord. vertical, R11: coord. horizontal
+;                   - R7: Ecrã a desenhar
 ; *********************************************************************************
 
 desenha_asteroide:           
@@ -404,6 +409,7 @@ desenha_asteroide:
     PUSH R11
     SUB R10, 2              ; R10 contem a coordenada vertical do canto do asteroide
     SUB R11, 2              ; R11 contem a coordenada horizontal do canto do asteroide
+    MOV [SELECIONA_ECRA], R7
     MOV R0, 0               ; O sprite é desenhado a a partir da sua primeira linha  
     CALL desenha_sprite     ; MODIFICA R1 e R0, R5 e R6, FAZER POP APÓS CHAMADA
     POP R11
@@ -477,24 +483,16 @@ desenha_linha:              ; Desenha uma linha arbitrária, usada por desenha_s
     ADD R0, 1
     JMP desenha_sprite     ; Desenha a linha seguinte
 
-escreve_pixel:              
-    PUSH R0
-    MOV R0, MEMORIA_ECRA
-
-    PUSH R1                ; guarda o valor de R1
-    PUSH R2                ; guarda o valor de R2
-    PUSH R3                ; guarda o valor de R3
-                           ; É assumido presente em R1 a linha e em R2 a coluna, em R3 a cor
-	SHL	R1, 6		       ; linha * 64
-    ADD  R1, R2		       ; linha * 64 + coluna
-    SHL  R1, 1		   	   ; * 2, para ter o endereço da palavra
-	ADD	R0, R1		       ; MEMORIA_ECRA + 2 * (linha * 64 + coluna)
-	MOV	[R0], R3		   ; escreve cor no pixel
-    
-    POP R3
-    POP R2
-    POP R1
-    POP R0                  
+; **********************************************************************
+; ESCREVE_PIXEL - Escreve um pixel na posição dada
+;    Argumentos - R1: linha
+;                 R2: coluna
+;                 R3: cor   
+; **********************************************************************
+escreve_pixel:             ; Escreve um pixel na posição dada    
+    MOV [DEFINE_LINHA], R1
+    MOV [DEFINE_COLUNA], R2
+    MOV [DEFINE_PIXEL], R3
     RET
 
 ; **********************************************************************
@@ -947,17 +945,21 @@ desenha_sonda:
     PUSH R1                 ; guarda o valor de R1
     PUSH R2                 ; guarda o valor de R2
     PUSH R3
+    PUSH R4
+    MOV R4, 1               ; coloca em R4 o ecrã no qual desenhar a sonda´
+    MOV [SELECIONA_ECRA], R4; seleciona o ecrã 1
     MOV R0, VAR_SONDA_POS   ; coloca o endreço da posição vertical da sonda em R0
     MOV R1, [R0+R10]        ; coloca a posição vertical da sonda do meio em R1
     CALL sonda_offset       ; coloca em R2 a posição horizontal da sonda do meio
 
     MOV R3, MAGENTA_CLR       ; coloca a cor da sonda do meio em R3
-
+    
     CALL escreve_pixel      ; escreve o pixel na posição da sonda do meio
     ADD R1, 1               ; aponta para a posição gráfica vertical da sonda a apagar
     SUB R2, R11             ; coloca em R2 a posição da sonda a apagar
     MOV R3, 00000H          ; coloca em R3 a cor transparente
     CALL escreve_pixel      ; apaga o pixel na posição anterior da sonda do meio
+    POP R4
     POP R3
     POP R2
     POP R1                  ; recupera o valor de R1
@@ -1088,12 +1090,13 @@ PROCESS SP_asteroides
 ; R11 - INSTANCIA DO ASTEROIDE
 init_asteroides:
     MOV	R1, TAMANHO_PILHA	; tamanho em palavras da pilha de cada processo
-    MOV R0, R11
+    PUSH R11
     SUB R11, 1
     MUL	R1, R11			    ; TAMANHO_PILHA vezes o nº da instância do asteroide
     SUB	SP, R1		        ; inicializa SP deste asteroide, relativo ao SP indicado inicalmente
     MOV R10, R11            ;
-    MOV R11, R0
+    POP R11
+    MOV R7, R11             ; R7 é o número e argumento para o ecrã a usar ao desenhar o asteroide
     SHL R10, 1              ; multiplica o offset da instância por 2, R10 é agora o offset em bytes
 
     ; R0 OFFSET HORIZONTAL DO ASTEROIDE
@@ -1121,7 +1124,7 @@ asteroide_check:
     JZ asteroide_on         ; salta para o código que move o asteroide
     JMP asteroide_spawn     ; salta para o código que verifica o spawn do asteroide
 
-asteroide_on:            ; código que move o asteroide 
+asteroide_on:               ; código que move o asteroide 
 ; R6 CONTEM O OFFSET DE MEMORIA PARA O AST. MINERÁVEL
     MOV R5, [AST_LOCK]      ; Bloqueia o processo dos asteroides
 
@@ -1152,13 +1155,13 @@ asteroide_on:            ; código que move o asteroide
     CALL desenha_asteroide  ; desenha o asteroide
     
 
-    CMP R10, R9              ; se o asteroide tiver excedido um limite
+    CMP R10, R9             ; se o asteroide tiver excedido um limite
     JZ asteroide_reset      ; salta para o código que reinicia o asteroide
 
     MOV R4, VAR_AST_ON
     MOV R4, [R5+R4]         ; coloca o estado do asteroide em R5
     CMP R4, 0
-    JZ asteroide_boom      ; se o asteroide estiver desligado, salta para o código que desliga graficamente o asteroide
+    JZ asteroide_boom       ; se o asteroide estiver desligado, salta para o código que desliga graficamente o asteroide
 
     POP R11                 ; recupera o valor de R10
     POP R10                 ; recupera o valor de R11
@@ -1176,9 +1179,10 @@ asteroide_reset:
 
 asteroide_spawn:  
     YIELD    
+    PUSH R7
     MOV R4, [VAR_STATUS]    ;
     CMP R4, 0               ; se o jogo estiver acabado
-    JZ asteroides        ; salta para o código que desliga o asteroide
+    JZ asteroides           ; salta para o código que desliga o asteroide
 
     MOV R4, [VAR_AST_NUM]   ; coloca o número de asteroides ativos em R4
     CMP R4, 4               ; se o número de asteroides ativos for 4
@@ -1217,7 +1221,8 @@ asteroide_spawn:
     MOV [R5+R10], R6        ; atualiza o tipo do asteroide
 
 fim_spawn:
-    POP R0   
+    POP R0
+    POP R7   
     MOV R6, [R5+R10]
     MOV R5, 2
     MUL R6, R5              ; multiplica o tipo do asteroide por 2
