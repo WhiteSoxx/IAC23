@@ -49,6 +49,8 @@ DEFINE_PIXEL   		EQU COMANDOS + 12H	; endereço do comando para escrever um pixe
 APAGA_AVISO     	EQU COMANDOS + 40H  ; endereço do comando para apagar o aviso de nenhum cenário selecionado
 APAGA_ECRÃ	 		EQU COMANDOS + 02H	; endereço do comando para apagar todos os pixels já desenhados
 SELECIONA_CENARIO   EQU COMANDOS + 42H  ; endereço do comando para selecionar uma imagem de fundo
+APAGA_FRONTAL       EQU COMANDOS + 44H  ; endereço do comando para apagar a imagem frontal
+SELECIONA_FRONTAL   EQU COMANDOS + 46H  ; endereço do comando para selecionar uma imagem frontal
 SELECIONA_VID       EQU COMANDOS + 48H  ; endereço do comando para selecionar um vídeo/som
 PLAY_VID            EQU COMANDOS + 5AH  ; endereço do comando para começar a reproduzir o vídeo/som selecionado
 
@@ -645,15 +647,18 @@ ha_tecla:              ; neste ciclo espera-se até NENHUMA tecla estar premida
 
 pausa:
     PUSH R1
-    MOV R1, 4                    
+    MOV R1, 4            
+    MOV [SELECIONA_FRONTAL], R1 ; seleciona o cenário frontal de pausa      
     JMP toggle_pausa
+
 
 resume:
     PUSH R1
     MOV R1, 0                    
     MOV [PAUSA_LOCK], R0
+    MOV [APAGA_FRONTAL], R1  ; Apaga o ecrã de pausa 
+
 toggle_pausa:
-    MOV  [SELECIONA_CENARIO], R1 ; seleciona o cenário escolhido (Pausa/jogo)
     MOV R1, [VAR_STATUS]     ; coloca a variável de estado do jogo em R1
     SUB R1, 1                ; Se 2, passa para 1, se 1, passa para 0
     MOV R0, 1                ; "Máscara" para o XOR
