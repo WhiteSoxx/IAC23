@@ -582,7 +582,7 @@ espera_tecla:          ; neste ciclo espera-se até uma tecla ser premida
     CMP  R10, 2                   ; se o jogo estiver em pausa
     JZ testa_empausa
 
-testa_tecla:
+testa_tecla:             ; testa a tecla premida durante o jogo
     POP R10
     POP R1               ; retira da pilha a linha e coluna da tecla premida
 
@@ -613,9 +613,13 @@ testa_tecla:
     CMP R1, R8
     JZ  pausa
 
+    MOV R8, TEC_4      ; coloca o ID da tecla 4 em R8
+    CMP R1, R8
+    JZ  suspende
+
     JMP ha_tecla       ; testa se a tecla permanece premida
 
-testa_start:
+testa_start:           ; testa a tecla premida durante o menu inicial
     POP R10
     POP R1             ; retira da pilha a linha e coluna da tecla premida
 
@@ -633,7 +637,7 @@ debug_sprites_call:
     CALL debug_sprites
     JMP ha_tecla
 
-testa_empausa:
+testa_empausa:         ; testa a tecla premida durante o menu de pausa
     POP R10
     POP R1             ; retira da pilha a linha e coluna da tecla premida
 
@@ -659,16 +663,30 @@ ha_tecla:              ; neste ciclo espera-se até NENHUMA tecla estar premida
     JMP  tec_ciclo     ; se não houver, repete-se o ciclo de teste do teclado
 
 pausa:
+
     PUSH R1
+    MOV R0, SOM_PAUSA
+    CALL toca_som 
     MOV R1, 4            
     MOV [SELECIONA_FRONTAL], R1 ; seleciona o cenário frontal de pausa      
     JMP toggle_pausa
 
+suspende:
+    PUSH R0
+    PUSH R10
+    MOV R0, SOM_SUSPEND
+    MOV R10, 1
+    CALL fim_jogo
+    POP R10
+    POP R0
+    JMP tec_ciclo
 
 resume:
     PUSH R1
+    MOV R0, SOM_RESUME
+    CALL toca_som 
     MOV R1, 0                    
-    MOV [PAUSA_LOCK], R0
+    MOV [PAUSA_LOCK], R0     ; desploqueia todos os processos que chamaram a pausa
     MOV [APAGA_FRONTAL], R1  ; Apaga o ecrã de pausa 
 
 toggle_pausa:
@@ -679,6 +697,7 @@ toggle_pausa:
     ADD R1, 1                ; Se 0, passa para 1, se 1, passa para 2
     MOV [VAR_STATUS], R1     ; atualiza o valor da variável de estado do jogo
     POP R1
+
     JMP ha_tecla             ; volta ao ciclo principal do teclado
 
 dispara_sonda:    ; Ativa a sonda na posição R0
@@ -1114,7 +1133,7 @@ PROCESS SP_asteroides
 init_asteroides:
     MOV	R1, TAMANHO_PILHA	; tamanho em palavras da pilha de cada processo
     MOV R7, R11
-    
+
     SUB R11, 1
     MUL	R1, R11			    ; TAMANHO_PILHA vezes o nº da instância do asteroide
     SUB	SP, R1		        ; inicializa SP deste asteroide, relativo ao SP indicado inicalmente
