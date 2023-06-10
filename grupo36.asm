@@ -56,6 +56,21 @@ SELECIONA_VID       EQU COMANDOS + 48H  ; endereço do comando para selecionar u
 PLAY_VID            EQU COMANDOS + 5AH  ; endereço do comando para começar a reproduzir o vídeo/som selecionado
 
 ; ******************************************************************************
+; * Sons
+; ******************************************************************************
+SOM_PROBE           EQU	0				; numero do som de probe
+SOM_SPAWN           EQU	1				; numero do som de spawn
+SOM_COOLDOWN        EQU	2				; numero do som de cooldown
+SOM_ASTBOOM         EQU	3				; numero do som de asteroide a explodir
+SOM_MINBOOM         EQU	4				; numero do som de mineravel a explodir
+SOM_START           EQU	5				; numero do som de start
+SOM_FIMENERGIA      EQU	6				; numero do som de fim de energia
+SOM_FIMAST          EQU	7				; numero do som de fim de jogo por asteroide
+SOM_PAUSA           EQU	8				; numero do som de pausa
+SOM_RESUME          EQU	9				; numero do som de resume
+SOM_SUSPEND         EQU	10				; numero do som de suspend
+
+; ******************************************************************************
 ; * Gráficos
 ; ******************************************************************************
 
