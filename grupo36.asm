@@ -126,6 +126,9 @@ NAVE_Y       EQU  23
 LARGURA_NAVE EQU 13
 ALTURA_NAVE  EQU 9
 
+ASA_ESQ_V    EQU  28
+ASA_ESQ_H    EQU  28
+
 COL_DIST     EQU  3 ; Distância necessária para colisão entre sonda e asteroide
 
 COLISAO_MID_ASTEROIDE   EQU 20       ; altura máxima que os asteroides nao inocuos devem atingir
@@ -255,21 +258,30 @@ DEF_NAVE:
     WORD LARGURA_NAVE
     WORD ALTURA_NAVE
     WORD 0, 0, 0, 0, 0, CINZ_ESC, CINZ_ESC, CINZ_ESC, 0, 0, 0, 0, 0          
-    WORD 0, 0, 0, 0, CINZ_ESC, CINZ_CLR, CINZENTO, CINZ_CLR, CINZ_ESC, 0, 0, 0, 0          
-    WORD 0, 0, CINZ_ESC, 0, CINZ_ESC, AZUL_CLR, AZUL_CLR, AZUL_CLR, CINZ_ESC, 0, CINZ_ESC, 0, 0
-    WORD 0, CINZ_ESC, CINZ_CLR, CINZ_ESC, CINZ_ESC, AZUL_ESC, AZUL_ESC, AZUL_ESC, CINZ_ESC, CINZ_ESC, CINZ_CLR, CINZ_ESC, 0         
+    WORD 0, 0, 0, 0, CINZ_ESC, CINZ_CLR, CINZ_CLR, CINZ_CLR, CINZ_ESC, 0, 0, 0, 0          
+    WORD 0, 0, CINZ_ESC, 0, CINZ_ESC, AMARELO_CLR, AMARELO_CLR, AMARELOXCLR, CINZ_ESC, 0, CINZ_ESC, 0, 0
+    WORD 0, CINZ_ESC, CINZ_CLR, CINZ_ESC, CINZ_ESC, AMARELO_ESC, AMARELO_ESC, AMARELO_CLR, CINZ_ESC, CINZ_ESC, CINZ_CLR, CINZ_ESC, 0         
     WORD CINZ_ESC, ROXO_ESC, CINZ_CLR, ROXO_ESC, CINZ_ESC, CINZENTO, CINZENTO, CINZENTO, CINZ_ESC, ROXO_ESC, CINZ_CLR, ROXO_ESC, CINZ_ESC           
     WORD CINZ_ESC, CINZ_CLR, CINZ_CLR, CINZ_CLR, CINZ_ESC, CINZENTO, CINZENTO, CINZENTO, CINZ_ESC, CINZ_CLR, CINZ_CLR, CINZ_CLR, CINZ_ESC         
     WORD CINZ_ESC, ROXO_ESC, CINZ_CLR, ROXO_ESC, CINZ_ESC, CINZENTO, CINZENTO, CINZENTO, CINZ_ESC, ROXO_ESC, CINZ_CLR, ROXO_ESC, CINZ_ESC 
     WORD 0, CINZ_ESC, CINZ_CLR, CINZ_ESC, CINZ_CLR, CINZENTO, CINZENTO, CINZENTO, CINZ_CLR, CINZ_ESC, CINZ_CLR, CINZ_ESC, 0         
     WORD 0, 0, CINZ_ESC, 0, 0, CINZ_CLR, CINZ_CLR, CINZ_CLR, 0, 0, CINZ_ESC, 0, 0                   
 
+LUZES_TAB:
+    WORD AMARELO_CLR
+    WORD ROXO_CLR
+    WORD MAGENTA_CLR
+    WORD AZUL_CLR
+    WORD LARANJA_CLR
+    WORD VERMELHO
+
+
 ; ******************************************************************************
 ; * LOCKS
 ; ******************************************************************************
 AST_LOCK:    LOCK 0
 SONDA_LOCK:  LOCK 0
-NAVE_LOCK:   LOCK 0
+LUZ_LOCK:   LOCK 0
 START_LOCK:  LOCK 0
 PAUSA_LOCK:  LOCK 0
 ENERGIA_LOCK:LOCK 0
@@ -280,7 +292,7 @@ ENERGIA_LOCK:LOCK 0
 tab: WORD int_ast
      WORD int_sonda
      WORD int_energia
-     WORD 0
+     WORD int_luz
 
 ; ******************************************************************************
 ; * Código
@@ -396,10 +408,10 @@ desenha_nave:
     PUSH R11
     MOV R10, NAVE_Y  ; coloca a posição vertical do canto do sprite da nave em R10
     MOV R11, NAVE_X  ; coloca a posição horizontal do canto do sprite da nave em R11
-    MOV R4, 0
-    MOV [SELECIONA_ECRA], R4
-    MOV R4, DEF_NAVE ; coloca o endereço da tabela do sprite da nave em R4
-    CALL desenha_sprite 
+    MOV R0, 0
+    MOV [SELECIONA_ECRA], R0
+    MOV R4, DEF_NAVE    ; coloca o endereço da tabela do sprite da nave em R4
+    CALL desenha_sprite ; "consome" R0, que deve estar a 0 para desenhar a nave na primeira linha
     POP R11
     POP R10
     POP R6
@@ -536,6 +548,12 @@ int_energia:
     PUSH R0
     MOV R0, 0
     MOV [ENERGIA_LOCK], R0    ; desbloqueia o processo da sonda
+    POP R0
+    RFE 
+int_luz:
+    PUSH R0
+    MOV R0, 0
+    MOV [LUZ_LOCK], R0    ; desbloqueia o processo da sonda
     POP R0
     RFE 
 
@@ -700,16 +718,16 @@ toggle_pausa:
 
     JMP ha_tecla             ; volta ao ciclo principal do teclado
 
-dispara_sonda:    ; Ativa a sonda na posição R0
+dispara_sonda:     ; Ativa a sonda na posição R0
     PUSH R1
     PUSH R2
 
-    MOV R1, [R0]  ; coloca o estado da sonda do meio em R1
+    MOV R1, [R0]   ; coloca o estado da sonda do meio em R1
     PUSH R1
 
-    MOV R2, 1     ; coloca o valor 1 em R2
+    MOV R2, 1      ; coloca o valor 1 em R2
     OR R1, R2      ; liga a sonda do meio, mantem ligada
-    MOV [R0], R1  ; atualiza o estado da sonda do meio
+    MOV [R0], R1   ; atualiza o estado da sonda do meio
 
     POP R2
     CMP R1, R2     ; se a sonda do meio acaba de ligar
@@ -721,12 +739,12 @@ dispara_sonda:    ; Ativa a sonda na posição R0
     JNZ som_disparo;
 
 som_disparo:
-    MOV R0, 0    ; coloca o valor 1 em R0
+    MOV R0, 0     ; coloca o valor 1 em R0
     CALL toca_som ; toca o som da sonda
     JMP fim_disparo
 
 som_cooldown:
-    MOV R0, 2    ; coloca o valor 2 em R0
+    MOV R0, 2     ; coloca o valor 2 em R0
     CALL toca_som ; toca o som de cooldown da sonda
 
 fim_disparo:
@@ -794,7 +812,7 @@ fim_jogo:                    ; r10 escolhe o bg, r0 escolhe o som
         CMP R3, R2
         JNZ vars_zero_loop
     MOV R0, V_BASE_AST
-    MOV R2, 8               ; 5 VARS DE ASTEROIDE 
+    MOV R2, 8               ; 4 VARS DE ASTEROIDE 
     MOV R3, VAR_AST_POS_V
     ADD R2, R3    
     ast_vpos_loop:
@@ -820,7 +838,9 @@ fim_jogo:                    ; r10 escolhe o bg, r0 escolhe o som
 
     MOV R1, 0
     MOV [VAR_AST_NUM], R1    ; coloca o valor 0 em VAR_AST_NUM
-    MOV [VAR_ENERGIA], R1    ; coloca o valor 0 em VAR_ENERGIA
+    ;MOV [VAR_ENERGIA], R1    ; coloca o valor 0 em VAR_ENERGIA
+    ; Dependendo da intenção, pode ou não ser necessário reiniciar a energia. A função inicio_jogo já o faz.
+    ; Logo, a linha anterior pode ser comentada, sendo puramente estética.
     
     POP R3
     POP R2
@@ -880,24 +900,56 @@ PROCESS SP_nave
 nave:
     MOV R1, [VAR_STATUS]
     CMP R1, 0
-    JZ aguarda_inicio_n              
-
+    JZ aguarda_inicio_n  
+        
+    EI3
+    EI2
+    EI1
+    EI0           
     EI
-    MOV R1, 0
-    MOV [SELECIONA_CENARIO], R1 ; seleciona o cenário 1 (Splash Screen)
-    
-    
-    CALL desenha_nave
 
-    MOV  R10, [NAVE_LOCK] ; bloqueia o update da nave
+luzes_reset:
+    MOV R1, ASA_ESQ_V
+    MOV R2, ASA_ESQ_H
+    MOV R3, LUZES_TAB
+    MOV R4, 6
+    CALL numero_aleatorio    ; Coloca num registo um valor aleatório entre 0 e 15
+    MOD R0, R4               ; Obtem se um valor aleatório entre 0 e 5
+    SHL R0, 1                ; Multiplica o valor aleatório por 2, para aceder à tabela de cores
+    MOV R3, [R3+R0]
+asa_esq:
+    DEC R1                   
+    DEC R2                   ; Aponta para o canto sup. esq da asa esquerda
+    CALL desenha_luz
+    ADD R2, 2                ; Aponta para o canto sup. dir da asa esquerda
+    CALL desenha_luz
+    ADD R1, 2                ; Aponta para o canto inf. dir da asa esquerda
+    CALL desenha_luz
+    SUB R2, 2                ; Aponta para o canto inf. esq da asa esquerda
+    CALL desenha_luz
 
+asa_dir:
+    MOV R4, 8                ; Aponta para o canto inf. esq da asa direita
+    ADD R2, R4
+    SUB R1, 2                ; Aponta para o canto sup. esq da asa direita
+    CALL desenha_luz
+    ADD R2, 2                ; Aponta para o canto sup. dir da asa direita
+    CALL desenha_luz
+    ADD R1, 2                ; Aponta para o canto inf. dir da asa direita
+    CALL desenha_luz
+    SUB R2, 2                ; Aponta para o canto inf. esq da asa direita
+    CALL desenha_luz
+    JMP aguarda_inicio_n
+
+desenha_luz:
+    CALL pausa_check 
+
+    CALL escreve_pixel
+        MOV R0, [LUZ_LOCK]
+    RET
 aguarda_inicio_n:
     YIELD
     JMP nave
-
-atualiza_nave_loop:
-    YIELD
-    JMP atualiza_nave_loop
 
 ; *********************************************************************************
 ; Processo - Sondas
