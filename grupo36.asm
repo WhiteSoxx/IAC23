@@ -48,6 +48,7 @@ DEFINE_COLUNA  		EQU COMANDOS + 0CH	; endereço do comando para definir a coluna
 DEFINE_PIXEL   		EQU COMANDOS + 12H	; endereço do comando para escrever um pixel
 APAGA_AVISO     	EQU COMANDOS + 40H  ; endereço do comando para apagar o aviso de nenhum cenário selecionado
 APAGA_ECRÃ	 		EQU COMANDOS + 02H	; endereço do comando para apagar todos os pixels já desenhados
+SELECIONA_ECRA      EQU COMANDOS + 04H
 SELECIONA_CENARIO   EQU COMANDOS + 42H  ; endereço do comando para selecionar uma imagem de fundo
 APAGA_FRONTAL       EQU COMANDOS + 44H  ; endereço do comando para apagar a imagem frontal
 SELECIONA_FRONTAL   EQU COMANDOS + 46H  ; endereço do comando para selecionar uma imagem frontal
@@ -402,6 +403,7 @@ desenha_asteroide:
     PUSH R6
     PUSH R10
     PUSH R11
+    MOV [SELECIONA_ECRA], R7
     SUB R10, 2              ; R10 contem a coordenada vertical do canto do asteroide
     SUB R11, 2              ; R11 contem a coordenada horizontal do canto do asteroide
     MOV R0, 0               ; O sprite é desenhado a a partir da sua primeira linha  
@@ -880,7 +882,7 @@ init_sonda:
     MUL	R1, R10			    ; TAMANHO_PILHA vezes o nº da instância da sonda
 	SUB	SP, R1		        ; inicializa SP desta sonda, relativo ao SP indicado inicalmente
     SHL R10, 1              ; multiplica o offset da instância por 2, R10 é agora o offset em bytes
-
+    MOV R7, 0
 sonda:
     CALL pausa_check        ; verifica se o jogo está em pausa
     MOV R1, [VAR_STATUS]
@@ -947,6 +949,10 @@ desenha_sonda:
     PUSH R1                 ; guarda o valor de R1
     PUSH R2                 ; guarda o valor de R2
     PUSH R3
+    PUSH R4
+    MOV R4, 0
+    MOV [SELECIONA_ECRA], R4
+    POP R4
     MOV R0, VAR_SONDA_POS   ; coloca o endreço da posição vertical da sonda em R0
     MOV R1, [R0+R10]        ; coloca a posição vertical da sonda do meio em R1
     CALL sonda_offset       ; coloca em R2 a posição horizontal da sonda do meio
@@ -1088,6 +1094,7 @@ PROCESS SP_asteroides
 ; R11 - INSTANCIA DO ASTEROIDE
 init_asteroides:
     MOV	R1, TAMANHO_PILHA	; tamanho em palavras da pilha de cada processo
+    MOV R7, R11
     MOV R0, R11
     SUB R11, 1
     MUL	R1, R11			    ; TAMANHO_PILHA vezes o nº da instância do asteroide
@@ -1143,12 +1150,14 @@ asteroide_on:            ; código que move o asteroide
     MOV R4, DEF_CLEAR_AST
     SUB R11, R8            ; Subs servem para apagar o asteroide na posição anterior
     SUB R10, 1
+    MOV [SELECIONA_ECRA], R7
     CALL desenha_asteroide
 
     ADD R11, R8
     ADD R10, 1
     MOV R4, DEF_ASTEROIDE   ; coloca o endereço do desenho do asteroide em R4
     ADD R4, R6              ; adiciona o offset vertical de memoória ao endreço
+    MOV [SELECIONA_ECRA], R7
     CALL desenha_asteroide  ; desenha o asteroide
     
 
@@ -1189,11 +1198,13 @@ asteroide_spawn:
     POP R0
     MOV R5, 4               ; coloca o número 4 em R5
     MOD R6, R5              ; Resto de 15/4 = 0, 1, 2, ou 3 
+    PUSH R7
     MOV R7, 6               ; coloca o número 6 em R7, para andar para a cobinação seguinte
 
     MOV R5, TAB_AST         ; TAB_AST contem os trios possíveis (Coluna, direção, limite)
 
     MUL R6, R7              ; multiplica o número aleatório por 6
+    POP R7
     ADD R5, R6
     MOV R6, [R5]            ; coloca o valor da coluna em R6
     MOV [R2+R10], R6        ; coloca o valor da coluna no respetivo asteroide
@@ -1247,12 +1258,14 @@ asteroide_boom:
     MOV R4, DEF_AST_BOOM
     MUL R6, R0             ; multiplica o tipo do asteroide por 52, tamanho da definição de asteroide
     POP R0
-    ADD R4, R6              
+    ADD R4, R6      
+    MOV [SELECIONA_ECRA], R7        
     CALL desenha_asteroide  ; desenha o asteroide
     MOV R6, [AST_LOCK]
  
 asteroide_off:              ; desliga o asteroide
     MOV R4, DEF_CLEAR_AST  
+    MOV [SELECIONA_ECRA], R7 
     CALL desenha_asteroide  ; apaga o asteroide
     POP R11
     POP R10
