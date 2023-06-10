@@ -146,19 +146,19 @@ H_BASE_AST_5 EQU 61
 	PLACE       1000H
 
 	STACK TAMANHO_PILHA 			; espaçco reservado para a pilha (200H bytes, ou 100H words)
-SP_inicial:				; Stack pointer do programa inicial
-    STACK TAMANHO_PILHA          ; espaço reservado para a pilha (200H bytes, ou 100H words)
+SP_inicial:		 ; Stack pointer do programa inicial
+    STACK TAMANHO_PILHA          
 SP_teclado:      ; Stack pointer do programa do teclado
-    STACK TAMANHO_PILHA          ; espaço reservado para a pilha (200H bytes, ou 100H words)
+    STACK TAMANHO_PILHA          
 SP_nave:         ; Stack pointer do programa da nave
-    STACK TAMANHO_PILHA * 3          ; espaço reservado para a pilha (200H bytes, ou 100H words)
+    STACK TAMANHO_PILHA * 3         
 SP_sonda:        ; Stack pointer do programa da sonda
-    STACK TAMANHO_PILHA * 5          ; espaço reservado para a pilha (200H bytes, ou 100H words)
+    STACK TAMANHO_PILHA * 5          
 SP_asteroides:   ; Stack pointer do programa dos asteroides
     STACK 20H
-SP_display:
+SP_display:      ; Stack pointer do programa do display
     STACK 20H
-SP_energia:
+SP_energia:      ; Stack pointer do programa da energia
 
 VAR_LINHA:      WORD 0         ; variável para guardar a linha atual
 VAR_COLUNA:     WORD 0         ; variável para guardar a coluna atual
@@ -229,7 +229,7 @@ DEF_AST_NRG:					; tabela que define o asteroide (cor, largura, pixels)
     WORD		LARANJA_CLR, ROXO_CLR   , MAGENTA_ESC, AMARELO_ESC, AMARELO_CLR  ;
     WORD	              0, LARANJA_CLR, ROXO_CLR, AMARELO_ESC, 0               ;
 
-DEF_CLEAR_AST:				; tabela que define o asteroide (cor, largura, pixels)
+DEF_CLEAR_AST:				; tabela que define o sprite que limpa o asteroide
     WORD		LARGURA_AST
     WORD        LARGURA_AST
     WORD		0, 0, 0, 0, 0		;
@@ -238,7 +238,7 @@ DEF_CLEAR_AST:				; tabela que define o asteroide (cor, largura, pixels)
     WORD		0, 0, 0, 0, 0		;
     WORD		0, 0, 0, 0, 0		;
 
-DEF_AST_BOOM:
+DEF_AST_BOOM:               ; tabela que define os sprites da animação de explosão do asteroide
     WORD		LARGURA_AST
     WORD        LARGURA_AST
     WORD		AMARELO_ESC, AMARELO_ESC, 0, 0, 0		;
@@ -267,7 +267,7 @@ DEF_NAVE:
     WORD 0, CINZ_ESC, CINZ_CLR, CINZ_ESC, CINZ_CLR, CINZENTO, CINZENTO, CINZENTO, CINZ_CLR, CINZ_ESC, CINZ_CLR, CINZ_ESC, 0         
     WORD 0, 0, CINZ_ESC, 0, 0, CINZ_CLR, CINZ_CLR, CINZ_CLR, 0, 0, CINZ_ESC, 0, 0                   
 
-LUZES_TAB:
+LUZES_TAB:              ; tabela que define as luzes para seleção aleatória
     WORD AMARELO_CLR
     WORD ROXO_CLR
     WORD MAGENTA_CLR
@@ -535,25 +535,25 @@ toca_som:
 int_sonda:
     PUSH R0
     MOV R0, 0
-    MOV [SONDA_LOCK], R0      ; desbloqueia o processo da sonda
+    MOV [SONDA_LOCK], R0      ; desbloqueia os processos das sondas
     POP R0
     RFE 
 int_ast:
     PUSH R0
     MOV R0, 0
-    MOV [AST_LOCK], R0        ; desbloqueia o processo da sonda
+    MOV [AST_LOCK], R0        ; desbloqueia os processos dos asteroides
     POP R0
     RFE 
 int_energia:
     PUSH R0
     MOV R0, 0
-    MOV [ENERGIA_LOCK], R0    ; desbloqueia o processo da sonda
+    MOV [ENERGIA_LOCK], R0    ; desbloqueia o processo da energia
     POP R0
     RFE 
 int_luz:
     PUSH R0
     MOV R0, 0
-    MOV [LUZ_LOCK], R0    ; desbloqueia o processo da sonda
+    MOV [LUZ_LOCK], R0    ; desbloqueia o processo das luzes
     POP R0
     RFE 
 
@@ -840,7 +840,7 @@ fim_jogo:                    ; r10 escolhe o bg, r0 escolhe o som
 
     MOV R1, 0
     MOV [VAR_AST_NUM], R1    ; coloca o valor 0 em VAR_AST_NUM
-    ;MOV [VAR_ENERGIA], R1    ; coloca o valor 0 em VAR_ENERGIA
+    ;MOV [VAR_ENERGIA], R1   ; coloca o valor 0 em VAR_ENERGIA
     ; Dependendo da intenção, pode ou não ser necessário reiniciar a energia. A função inicio_jogo já o faz.
     ; Logo, a linha anterior pode ser comentada, sendo puramente estética.
     
@@ -965,16 +965,16 @@ aguarda_inicio_n:
 PROCESS SP_sonda
 
 init_sonda:
-	MOV	R1, TAMANHO_PILHA	; tamanho em palavras da pilha de cada processo
-    MOV R10, R11            ;
-    ADD R10, 1              ; R10 contem o offset para os endreços das variáveis da sonda
-    MUL	R1, R10			    ; TAMANHO_PILHA vezes o nº da instância da sonda
-	SUB	SP, R1		        ; inicializa SP desta sonda, relativo ao SP indicado inicalmente
-    SHL R10, 1              ; multiplica o offset da instância por 2, R10 é agora o offset em bytes
-    MOV R3, 0               ; coloca o valor 0 em R3, contador dos movimentos da sonda
+	MOV	R1, TAMANHO_PILHA	 ; tamanho em palavras da pilha de cada processo
+    MOV R10, R11             ;
+    ADD R10, 1               ; R10 contem o offset para os endreços das variáveis da sonda
+    MUL	R1, R10			     ; TAMANHO_PILHA vezes o nº da instância da sonda
+	SUB	SP, R1		         ; inicializa SP desta sonda, relativo ao SP indicado inicalmente
+    SHL R10, 1               ; multiplica o offset da instância por 2, R10 é agora o offset em bytes
+    MOV R3, 0                ; coloca o valor 0 em R3, contador dos movimentos da sonda
 
 sonda:
-    CALL pausa_check        ; verifica se o jogo está em pausa
+    CALL pausa_check         ; verifica se o jogo está em pausa
     MOV R1, [VAR_STATUS]
     CMP R1, 0
     JZ aguarda_inicio_s
@@ -1025,58 +1025,58 @@ m_sonda_off:
     CALL escreve_pixel       ; apaga o pixel na posição da sonda
 
     MOV R1, 0            
-    MOV R0, VAR_SONDA_ON    ; coloca o endreço do estado da sonda em R0
-    MOV [R0+R10], R1        ; desliga a sonda
-    MOV R1, SONDA_BASE      ; coloca a posição vertical base da sonda do meio em R1
-    CMP R10, 2              ; verifica se se trata de uma sonda lateral
+    MOV R0, VAR_SONDA_ON     ; coloca o endreço do estado da sonda em R0
+    MOV [R0+R10], R1         ; desliga a sonda
+    MOV R1, SONDA_BASE       ; coloca a posição vertical base da sonda do meio em R1
+    CMP R10, 2               ; verifica se se trata de uma sonda lateral
     JZ sonda_off_fim
-    ADD R1, LSONDA_V_OFFSET ; decrementa a posição vertical da sonda lateral 
+    ADD R1, LSONDA_V_OFFSET  ; decrementa a posição vertical da sonda lateral 
 
 sonda_off_fim:
-    MOV R0, VAR_SONDA_POS   ; coloca o endreço da posição vertical da sonda em R0
-    MOV [R0+R10], R1        ; atualiza a posição vertical da sonda do meio
-        MOV R1, [SONDA_LOCK]; pára o update da sonda lendo o lock
-    MOV R3, 0               ; coloca o valor 0 em R3, contador dos movimentos da sonda
+    MOV R0, VAR_SONDA_POS    ; coloca o endreço da posição vertical da sonda em R0
+    MOV [R0+R10], R1         ; atualiza a posição vertical da sonda do meio
+        MOV R1, [SONDA_LOCK] ; pára o update da sonda lendo o lock
+    MOV R3, 0                ; coloca o valor 0 em R3, contador dos movimentos da sonda
 
-    JMP sonda               ; volta ao ciclo principal da sonda
+    JMP sonda                ; volta ao ciclo principal da sonda
 
 desenha_sonda: 
-    PUSH R0                 ; guarda o valor de R0
-    PUSH R1                 ; guarda o valor de R1
-    PUSH R2                 ; guarda o valor de R2
+    PUSH R0                  ; guarda o valor de R0
+    PUSH R1                  ; guarda o valor de R1
+    PUSH R2                  ; guarda o valor de R2
     PUSH R3
     PUSH R4
-    MOV R4, 1               ; coloca em R4 o ecrã no qual desenhar a sonda´
-    MOV [SELECIONA_ECRA], R4; seleciona o ecrã 1
-    MOV R0, VAR_SONDA_POS   ; coloca o endreço da posição vertical da sonda em R0
-    MOV R1, [R0+R10]        ; coloca a posição vertical da sonda do meio em R1
-    CALL sonda_offset       ; coloca em R2 a posição horizontal da sonda do meio
+    MOV R4, 1                ; coloca em R4 o ecrã no qual desenhar a sonda´
+    MOV [SELECIONA_ECRA], R4 ; seleciona o ecrã 1
+    MOV R0, VAR_SONDA_POS    ; coloca o endreço da posição vertical da sonda em R0
+    MOV R1, [R0+R10]         ; coloca a posição vertical da sonda do meio em R1
+    CALL sonda_offset        ; coloca em R2 a posição horizontal da sonda do meio
 
-    MOV R3, MAGENTA_CLR     ; coloca a cor da sonda do meio em R3
+    MOV R3, MAGENTA_CLR      ; coloca a cor da sonda do meio em R3
     
-    CALL escreve_pixel      ; escreve o pixel na posição da sonda do meio
-    ADD R1, 1               ; aponta para a posição gráfica vertical da sonda a apagar
-    SUB R2, R11             ; coloca em R2 a posição da sonda a apagar
-    MOV R3, 00000H          ; coloca em R3 a cor transparente
-    CALL escreve_pixel      ; apaga o pixel na posição anterior da sonda do meio
-    POP R4
+    CALL escreve_pixel       ; escreve o pixel na posição da sonda do meio
+    ADD R1, 1                ; aponta para a posição gráfica vertical da sonda a apagar
+    SUB R2, R11              ; coloca em R2 a posição da sonda a apagar
+    MOV R3, 00000H           ; coloca em R3 a cor transparente
+    CALL escreve_pixel       ; apaga o pixel na posição anterior da sonda do meio
+    POP R4 
     POP R3
     POP R2
-    POP R1                  ; recupera o valor de R1
-    POP R0                  ; recupera o valor de R0
+    POP R1                   ; recupera o valor de R1
+    POP R0                   ; recupera o valor de R0
     RET
 
-sonda_offset:               ; COLOCA EM R2 A POSIÇÃO HORIZONTAL DA SONDA, ASSUME EM R1 A POS VERTICAL e R11 o OFFSET DA INSTÂNCIA
+sonda_offset:                ; COLOCA EM R2 A POSIÇÃO HORIZONTAL DA SONDA, ASSUME EM R1 A POS VERTICAL e R11 o OFFSET DA INSTÂNCIA
     PUSH R3
     PUSH R4
-    MOV R4, LSONDA_H_OFFSET              ; Offset da sonda lateral ao meio da nave
-    MOV R2, 32              ; coloca a posição horizontal base da sonda do meio em R2 (constante 32)
-    MOV R3, SONDA_BASE      ;
-    SUB R3, R1              ; R3 é a distância vertical viajada pela sonda do meio
-    MUL R3, R11             ; multiplica a posição vertical da sonda do meio pelo offset da instância
-    ADD R2, R3              ; coloca em R2 a posição horizontal da sonda do meio
-    MUL R4, R11             ; multiplica o offset da instância pelo offset da sonda lateral
-    ADD R2, R4              ; coloca em R2 a posição horizontal da sonda
+    MOV R4, LSONDA_H_OFFSET  ; Offset da sonda lateral ao meio da nave
+    MOV R2, 32               ; coloca a posição horizontal base da sonda do meio em R2 (constante 32)
+    MOV R3, SONDA_BASE       ;
+    SUB R3, R1               ; R3 é a distância vertical viajada pela sonda do meio
+    MUL R3, R11              ; multiplica a posição vertical da sonda do meio pelo offset da instância
+    ADD R2, R3               ; coloca em R2 a posição horizontal da sonda do meio
+    MUL R4, R11              ; multiplica o offset da instância pelo offset da sonda lateral
+    ADD R2, R4               ; coloca em R2 a posição horizontal da sonda
     POP R4
     POP R3
     RET
@@ -1121,10 +1121,10 @@ loop_colisao:               ; R1 - Pos vertical da sonda, R2 - Pos horizontal da
 
     SUB R0, R1              ; R0 é agora a distância vertical entre a sonda e o asteroide
     CMP R0, -COL_DIST              
-    JLT fim_loop_colisao  ; se R0 for maior ou igual a -3, a sonda está no minimo imediatamente abaixo do asteroide
+    JLT fim_loop_colisao    ; se R0 for maior ou igual a -3, a sonda está no minimo imediatamente abaixo do asteroide
 colisao_vertical:
     CMP R0, COL_DIST
-    JGT fim_loop_colisao       ; se a distância vertical for maior que 3, a sonda está acima do asteroide
+    JGT fim_loop_colisao    ; se a distância vertical for maior que 3, a sonda está acima do asteroide
 colisao_horizontal:
     MOV R3, VAR_AST_POS_H
     MOV R3, [R3+R10]        ; coloca a posição horizontal do asteroide a verificar em R1
@@ -1180,8 +1180,6 @@ fim_efetua_colisão:
     POP R0
     JMP fim_verifica_colisao
 
-
-; *********************************************************************************
 
 ; *********************************************************************************
 ; Processo - Asteroides
@@ -1244,7 +1242,7 @@ asteroide_on:               ; código que move o asteroide
     MOV R10, R4             ; coloca a posição vertical do asteroide em R10
    
     MOV R4, DEF_CLEAR_AST
-    SUB R11, R8            ; Subs servem para apagar o asteroide na posição anterior
+    SUB R11, R8             ; Subs servem para apagar o asteroide na posição anterior
     SUB R10, 1
     CALL desenha_asteroide
 
@@ -1345,13 +1343,13 @@ asteroide_boom:
     MOV R6, VAR_AST_TIPO
     MOV R6, [R6+R5]         ; coloca o tipo do asteroide em R6
     
-    MOV R0, R6     ; coloca o som a tocar
+    MOV R0, R6      ; coloca o som a tocar
     ADD R0, 3       ; adiciona 3 ao valor do som a tocar, resulta em 3/4 (som de explosão diferente consoante minerável)
-    CALL toca_som  ; toca o som
+    CALL toca_som   ; toca o som
    
     MOV R0, 54
     MOV R4, DEF_AST_BOOM
-    MUL R6, R0             ; multiplica o tipo do asteroide por 52, tamanho da definição de asteroide
+    MUL R6, R0              ; multiplica o tipo do asteroide por 52, tamanho da definição de asteroide
     POP R0
     ADD R4, R6              
     CALL desenha_asteroide  ; desenha o asteroide
@@ -1380,7 +1378,7 @@ asteroide_off:              ; desliga o asteroide
 
     JMP asteroides          ; volta a verificar o estado do asteroide
 
-asteroide_fim:              ; NOT FUCKING WORKING
+asteroide_fim:              
     POP R11                 ; recupera o valor de R11
     MOV R5, 0
     MOV [VAR_STATUS], R5
