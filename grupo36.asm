@@ -96,7 +96,7 @@ AZUL_ESC		EQU	0F58AH		; cor do pixel: preenchimento da nave em ARGB
 ; * Grandezas "físicas"
 ; *********************************************************************************
 SONDA_BASE      EQU 21          ; posição vertical inicial da sonda do meio
-SONDA_MAX       EQU 8           ; Altura max da sonda
+SONDA_MAX       EQU 12          ; Movimentos maximos da sonda
 LSONDA_V_OFFSET EQU 3           ; Offset da posição vertical inicial da sonda lateral
 LSONDA_H_OFFSET EQU 10          ; Offset da posição horizontal inicial da sonda lateral
 
@@ -828,6 +828,7 @@ debug_sprites_loop:
     INC R0                  ; incrementa o valor de R0
     CMP R0, 4
     JNZ debug_sprites_loop
+
 debug_sprites_fim:
     POP R11
     POP R10
@@ -843,7 +844,6 @@ debug_sprites_fim:
 PROCESS SP_nave
 
 nave:
-
     MOV R1, [VAR_STATUS]
     CMP R1, 0
     JZ aguarda_inicio_n              
@@ -856,6 +856,7 @@ nave:
     CALL desenha_nave
 
     MOV  R10, [NAVE_LOCK] ; bloqueia o update da nave
+
 aguarda_inicio_n:
     YIELD
     JMP nave
@@ -878,6 +879,7 @@ init_sonda:
     MUL	R1, R10			    ; TAMANHO_PILHA vezes o nº da instância da sonda
 	SUB	SP, R1		        ; inicializa SP desta sonda, relativo ao SP indicado inicalmente
     SHL R10, 1              ; multiplica o offset da instância por 2, R10 é agora o offset em bytes
+    MOV R3, 0               ; coloca o valor 0 em R3, contador dos movimentos da sonda
 
 sonda:
     CALL pausa_check        ; verifica se o jogo está em pausa
@@ -899,14 +901,16 @@ m_sonda_check:
 m_sonda_on:
     MOV R0, VAR_SONDA_POS    ; coloca o endreço da posição vertical da sonda em R0
     MOV R1, [R0+R10]         ; coloca a posição vertical da sonda do meio em R1
-
+   
     MOV R2, SONDA_MAX        ; coloca a posição vertical máxima da sonda em R2
-    CMP R1, R2               ; se a sonda do meio estiver na posição mais alta
+    CMP R3, R2               ; se a sonda do meio estiver na posição mais alta
     JZ m_sonda_off           ; salta para o código da sonda do meio desligada
 
     CALL desenha_sonda       ; desenha a sonda do meio na posição atual
     SUB R1, 1                ; decrementa a posição vertical da sonda
     MOV [R0+R10], R1         ; atualiza a posição vertical da sonda 
+
+    INC R3                   ; incrementa o contador de movimentos da sonda
 
     CALL verifica_colisao    ; verifica se a sonda colidiu com um asteróide
     MOV R0, VAR_SONDA_ON     ; coloca o endreço do estado da sonda em R0
@@ -923,6 +927,8 @@ m_sonda_off:
     MOV R1, [R0+R10]         ; coloca a posição vertical da sonda do meio em R1
     ADD R1, 1                ; aponta para a posição gráfica da sonda do meio
     CALL sonda_offset
+    MOV R3, 1                ; coloca o valor 1 em R3, para selecionar o ecrã da sonda
+    MOV [SELECIONA_ECRA], R3
     MOV R3, 0000H
     CALL escreve_pixel       ; apaga o pixel na posição da sonda
 
@@ -930,13 +936,15 @@ m_sonda_off:
     MOV R0, VAR_SONDA_ON    ; coloca o endreço do estado da sonda em R0
     MOV [R0+R10], R1        ; desliga a sonda
     MOV R1, SONDA_BASE      ; coloca a posição vertical base da sonda do meio em R1
-    CMP R10, 2
+    CMP R10, 2              ; verifica se se trata de uma sonda lateral
     JZ sonda_off_fim
-    ADD R1, LSONDA_V_OFFSET ; decrementa a posição vertical da sonda lateral
+    ADD R1, LSONDA_V_OFFSET ; decrementa a posição vertical da sonda lateral 
+
 sonda_off_fim:
     MOV R0, VAR_SONDA_POS   ; coloca o endreço da posição vertical da sonda em R0
     MOV [R0+R10], R1        ; atualiza a posição vertical da sonda do meio
-            MOV R1, [SONDA_LOCK]     ; pára o update da sonda lendo o lock
+        MOV R1, [SONDA_LOCK]     ; pára o update da sonda lendo o lock
+    MOV R3, 0               ; coloca o valor 0 em R3, contador dos movimentos da sonda
 
     JMP sonda               ; volta ao ciclo principal da sonda
 
