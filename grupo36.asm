@@ -338,7 +338,7 @@ loop_asteroides:
 reset_ecra:
     MOV  [APAGA_AVISO], R1	  ; apaga o aviso de nenhum cenário selecionado (o valor de R1 não é relevante)
     MOV  [APAGA_ECRÃ], R1	  ; apaga todos os pixels já desenhados (o valor de R1 não é relevante)
-    MOV  [SELECIONA_CENARIO], R1 ; seleciona o cenário 1 (Splash Screen)
+    MOV  [SELECIONA_FRONTAL], R1 ; seleciona o cenário 1 (Splash Screen)
     RET
 
 pausa_check:
@@ -774,7 +774,8 @@ inicio_jogo:
     MOV R1, 1                ; coloca o valor 1 em R1, para indicar que o jogo está iniciado
     MOV [VAR_STATUS], R1     ; atualiza o valor da variável de estado do jogo
     MOV R1, 0                ; coloca o valor 0 em R1, para selecionar o background 0 (gameplay)
-    MOV [SELECIONA_CENARIO], R1 ; atualiza o valor da variável de background           
+    MOV [SELECIONA_CENARIO], R1 ; atualiza o valor da variável de background     
+    MOV [APAGA_FRONTAL], R1  ; Apaga o ecrã de menu     
     MOV [VAR_AST_NUM], R1    ; coloca o valor 3 em VAR_AST_NUM  
     PUSH R0 
     MOV R0, 5
@@ -788,6 +789,7 @@ inicio_jogo:
     EI0
     EI1
     EI2
+    EI3
     EI
     JMP tec_ciclo            ; volta ao ciclo principal do teclado
 
@@ -901,23 +903,24 @@ nave:
     MOV R1, [VAR_STATUS]
     CMP R1, 0
     JZ aguarda_inicio_n  
-        
-    EI3
-    EI2
-    EI1
-    EI0           
+         
     EI
 
 luzes_reset:
     MOV R1, ASA_ESQ_V
     MOV R2, ASA_ESQ_H
-    MOV R3, LUZES_TAB
+    
     MOV R4, 6
+cor_aleatoria:
+    MOV R3, LUZES_TAB
     CALL numero_aleatorio    ; Coloca num registo um valor aleatório entre 0 e 15
     MOD R0, R4               ; Obtem se um valor aleatório entre 0 e 5
     SHL R0, 1                ; Multiplica o valor aleatório por 2, para aceder à tabela de cores
     MOV R3, [R3+R0]
-asa_esq:
+    CMP R3, R5               ; Se a cor for igual à cor anterior, repete o processo
+    JZ cor_aleatoria
+pinta_asas:
+; Asa esquerda
     DEC R1                   
     DEC R2                   ; Aponta para o canto sup. esq da asa esquerda
     CALL desenha_luz
@@ -928,7 +931,7 @@ asa_esq:
     SUB R2, 2                ; Aponta para o canto inf. esq da asa esquerda
     CALL desenha_luz
 
-asa_dir:
+; Asa direita
     MOV R4, 8                ; Aponta para o canto inf. esq da asa direita
     ADD R2, R4
     SUB R1, 2                ; Aponta para o canto sup. esq da asa direita
@@ -939,13 +942,16 @@ asa_dir:
     CALL desenha_luz
     SUB R2, 2                ; Aponta para o canto inf. esq da asa direita
     CALL desenha_luz
+    MOV R5, R3
     JMP aguarda_inicio_n
 
 desenha_luz:
     CALL pausa_check 
-
+    MOV R10, 0           
+    MOV [SELECIONA_ECRA], R10
+    
     CALL escreve_pixel
-        MOV R0, [LUZ_LOCK]
+    MOV R10, [LUZ_LOCK]
     RET
 aguarda_inicio_n:
     YIELD
@@ -1029,7 +1035,7 @@ m_sonda_off:
 sonda_off_fim:
     MOV R0, VAR_SONDA_POS   ; coloca o endreço da posição vertical da sonda em R0
     MOV [R0+R10], R1        ; atualiza a posição vertical da sonda do meio
-        MOV R1, [SONDA_LOCK]     ; pára o update da sonda lendo o lock
+        MOV R1, [SONDA_LOCK]; pára o update da sonda lendo o lock
     MOV R3, 0               ; coloca o valor 0 em R3, contador dos movimentos da sonda
 
     JMP sonda               ; volta ao ciclo principal da sonda
@@ -1046,7 +1052,7 @@ desenha_sonda:
     MOV R1, [R0+R10]        ; coloca a posição vertical da sonda do meio em R1
     CALL sonda_offset       ; coloca em R2 a posição horizontal da sonda do meio
 
-    MOV R3, MAGENTA_CLR       ; coloca a cor da sonda do meio em R3
+    MOV R3, MAGENTA_CLR     ; coloca a cor da sonda do meio em R3
     
     CALL escreve_pixel      ; escreve o pixel na posição da sonda do meio
     ADD R1, 1               ; aponta para a posição gráfica vertical da sonda a apagar
