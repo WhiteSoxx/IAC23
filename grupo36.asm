@@ -1113,13 +1113,13 @@ PROCESS SP_asteroides
 ; R11 - INSTANCIA DO ASTEROIDE
 init_asteroides:
     MOV	R1, TAMANHO_PILHA	; tamanho em palavras da pilha de cada processo
-    PUSH R11
+    MOV R7, R11
+    
     SUB R11, 1
     MUL	R1, R11			    ; TAMANHO_PILHA vezes o nº da instância do asteroide
     SUB	SP, R1		        ; inicializa SP deste asteroide, relativo ao SP indicado inicalmente
     MOV R10, R11            ;
-    POP R11
-    MOV R7, R11             ; R7 é o número e argumento para o ecrã a usar ao desenhar o asteroide
+
     SHL R10, 1              ; multiplica o offset da instância por 2, R10 é agora o offset em bytes
 
     ; R0 OFFSET HORIZONTAL DO ASTEROIDE
@@ -1202,7 +1202,6 @@ asteroide_reset:
 
 asteroide_spawn:  
     YIELD    
-    PUSH R7
     MOV R4, [VAR_STATUS]    ;
     CMP R4, 0               ; se o jogo estiver acabado
     JZ asteroides           ; salta para o código que desliga o asteroide
@@ -1210,6 +1209,8 @@ asteroide_spawn:
     MOV R4, [VAR_AST_NUM]   ; coloca o número de asteroides ativos em R4
     CMP R4, 4               ; se o número de asteroides ativos for 4
     JZ asteroide_check      ; Volta para o início do ciclo
+    
+    PUSH R7
     PUSH R0                 ; guarda o valor de R0
     CALL numero_aleatorio   ; coloca um número aleatório entre 0 e 15 em R0
     MOV R6, R0              ; coloca o número aleatório em R6
